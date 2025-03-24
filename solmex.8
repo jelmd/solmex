@@ -1,0 +1,309 @@
+.TH solmex 8 "2025-03-23"
+
+.SH "NAME"
+solmex \- a metrics exporter for Solaris
+
+.SH "SYNOPSIS"
+.nh
+.na
+.HP
+.B solmex
+[\fB\-LSVcdfh\fR]
+[\fB\-l\ \fIfile\fR]
+[\fB\-n\ \fIlist\fR]
+[\fB\-p\ \fIport\fR]
+[\fB\-s\ \fIip\fR]
+[\fB\-v\ DEBUG\fR|\fBINFO\fR|\fBWARN\fR|\fBERROR\fR|\fBFATAL\fR]
+[\fB\-x\ \fImetric_regex\fR]
+[\fB\-X\ \fIstats_regex\fR]
+[\fB\-i\ \fImetric_regex\fR]
+[\fB\-I\ \fIstats_regex\fR]
+.ad
+.hy
+
+.SH "DESCRIPTION"
+.B solmex
+is a \fBm\fRetrics \fBex\fRporter for the Solaris OS.
+Collected data can be exposed via HTTP in Prometheus exposition format [1]
+e.g. using the default endpoint URL
+\fBhttp://\fIhostname\fB:\fI9290\fB/metrics\fR
+and thus visualized e.g. using Grafana [2], Netdata [3], or Zabbix [4].
+
+In contrast to prometheus' node_exporter
+\fBsolmex\fR is written in plain C (having KISS in mind)
+and thus it is extremely lightweight, has beside libprom, libmicrohttp and
+OS standard libs libc and libm no other dependencies, is more or less a
+standalone tool and handles Solaris kernel statistics efficiently.
+Running \fBsolmex\fR with root privileges should be safe, however,
+running \fBsolmex\fR as a normal, unprivileged user should be preferred.
+
+As usual one should avoid to query any metrics not really needed.
+One may use the options \fB-x\fR,
+\fB-X\fR, \fB-i\fR, and \fB-I\fR with an extended regular expression (regex)
+argument to exclude/include metrics (lower case options) and to exclude/include
+stats by name (upper case options). Since the list of metrics to query gets
+constructed on the start of \fBsolmex\fR
+the complexity of the regex arguments have no
+impact when metrics actually get queried by a client.
+So there is no need to spent much
+time for optimizing the regexs - instead keep it small and simple.
+The include options take precedence over exclude options. So one may exclude
+all metrics (e.g. -x '.*') and include only the load agverage of the
+box (e.g. -i '.*_bootload_.*').
+
+\fBsolmex\fR operates in 3 modes:
+
+.RS 2
+.IP \fBdefault\fR 2
+Just collects all data as it would for a /metrics HTTP request, print
+it to the standard output and exit.
+.IP \fBforeground\fR
+Start the internal HTTP server to answer HTTP requests, but stays
+attached to the console/terminal (i.e. standard input, output and error).
+Use option \fB-f\fR to request this mode.
+.IP \fBdaemon\fR
+Start the internal HTTP server (daemon) to answer HTTP requests in the
+background (fork-exec model) in a new session, detach from the
+console/terminal, attach standard input, output and error to /dev/null
+and finally exit with exit code \fB0\fR, if the daemon is running as
+desired. Remember, if you do not specify a logfile to use, all messages
+emitted by the daemon get dropped.
+Use option \fB-d\fR to request this mode.
+.RE
+
+\fBsolmex\fR answers one HTTP request after another to have a
+very small footprint wrt. the system and queried device. So it is
+recommended to adjust your firewalls and/or HTTP proxies accordingly.
+If you need SSL or authentication, use a HTTP proxy like nginx - remember:
+\fBsolmex\fR should be kept as small and simple as possible.
+
+When \fBsolmex\fR runs in \fBforeground\fR or \fBdaemon\fR mode, it also
+returns by default the duration of the following data collect and format tasks:
+.RS 2
+.TP 2
+.B default
+HTTP related statistics.
+.TP
+.B process
+\fBsolmex\fR process related data.
+.TP
+.B node
+OS/kernel related statistics.
+.TP
+.B libprom
+All tasks together, i.e. sum of the default, process, and node task.
+.RE
+
+.SH "OPTIONS"
+.P
+The following options are supported:
+
+.TP
+.B \-L
+.PD 0
+.TP
+.B \-\-no\-scrapetime
+Disable the overall scrapetime metrics (libprom collector), i.e. the time
+elapsed when scraping all the required data. One needs to also disable
+collecting scrapetimes of all other collectors before this option
+gets honored. This is very helpful when one tries to determine the stats query
+interval to use.
+
+.TP
+.B \-S
+.PD 0
+.TP
+.B \-\-no\-scrapetime\-all
+Disable recording the scrapetime of each collector separately. There is
+one collector named \fBdefault\fR, which collects HTTP request/response
+statistics, the optional \fBprocess\fR collector, which records metrics
+about the solmex process itself, the \fBnode\fR collector, which queries
+the OS/kernel for metrics, and finally the \fBlibprom\fR collector,
+which just records the time it took to collect and prom-format the data
+of all other collectors.
+
+.TP
+.B \-V
+.PD 0
+.TP
+.B \-\-version
+Print \fBsolmex\fR version info and exit.
+
+.TP
+.B \-c
+.PD 0
+.TP
+.B \-\-compact
+Sending a HELP and TYPE comment alias description about a metric is
+according to the Prometheus exposition format [1] optional. With this
+option they will be ommitted in the HTTP response and thus it saves
+bandwith and processing time.
+
+.TP
+.B \-d
+.PD 0
+.TP
+.B \-\-daemon
+Run \fBsolmex\fR in \fBdaemon\fR mode.
+
+.TP
+.B \-f
+.PD 0
+.TP
+.B \-\-foreground
+Run \fBsolmex\fR in \fBforeground\fR mode.
+
+.TP
+.B \-h
+.PD 0
+.TP
+.B \-\-help
+Print a short help summary to the standard output and exit.
+
+.TP
+.BI \-l " file"
+.PD 0
+.TP
+.BI \-\-logfile= file
+Log all messages to the given \fIfile\fR when the main process is running.
+
+.TP
+.BI \-n " list"
+.PD 0
+.TP
+.BI \-\-no-metric= list
+Skip all the metrics given in the comma separated \fIlist\fR of identifiers.
+Currently supported are:
+
+.RS 4
+
+.TP 4
+.B version
+All \fsolmex_version\fR metrics (default collector).
+.TP 4
+.B node
+All \fBsolmex_node_*\fR metrics (node collector). See option \-x, \-X, \-i
+and \-I for a little bit more fine grained selection.
+.TP 4
+.B process
+All \fBsolmex_process_*\fR metrics (process collector).
+
+.RE
+
+.TP
+.BI \-p " num"
+.PD 0
+.TP
+.BI \-\-port= num
+Bind to port \fInum\fR and listen there for HTTP requests. Note that a port
+below 1024 usually requires additional privileges. Default: 9100
+
+.TP
+.BI \-s " IP"
+.PD 0
+.TP
+.BI \-\-source= IP
+Bind the HTTP server to the given \fIIP\fR address, only. Per default
+it binds to 0.0.0.0, i.e. all IPs configured on this host/zone/container.
+If you want to enable IPv6, just specify an IPv6 address here (\fB::\fR
+is the same for IPv6 as 0.0.0.0 for IPv4).
+
+.TP
+.BI \-v " level"
+.PD 0
+.TP
+.BI \-\-verbosity= level
+Set the message verbosity to the given \fIlevel\fR. Accepted tokens are
+\fBDEBUG\fR, \fBINFO\fR, \fBWARN\fR, \fBERROR\fR, \fBFATAL\fR and for
+convenience \fB1\fR..\fB5\fR respectively.
+
+.P
+The following flags are related to the node task and compared against stats
+reading metrics (\fBsolmex_node_*\fR), only.
+If you need a more fine grained
+selection, consider to use a proxy (e.g.  VictoriaMetrics vmagent or nginx,
+etc.).
+
+.TP
+.BI \-x " regex"
+.PD 0
+.TP
+.BI \-\-exclude-metrics= regex
+Exclude all metrics from the node task whoms name matches the given extended
+regular expression \fIregex\fR (see also \fBregcomp\fR(3C)).
+
+.TP
+.BI \-X " regex"
+.PD 0
+.TP
+.BI \-\-exclude-stats= regex
+Exclude all metrics from the node task whoms stats name matches the given
+extended regular expression \fIregex\fR (see also \fBregcomp\fR(3C)).
+
+.TP
+.BI \-i " regex"
+.PD 0
+.TP
+.BI \-\-include-metrics= regex
+Include all metrics from the node task whoms name matches the given extended
+regular expression \fIregex\fR (see also \fBregcomp\fR(3C)). Takes precedence
+over excludes (see -X ... and -x ...).
+
+.TP
+.BI \-I " regex"
+.PD 0
+.TP
+.BI \-\-include-stats= regex
+Include all metrics from the node task whoms stats name matches the given
+extended regular expression \fIregex\fR (see also \fBregcomp\fR(3C)). Takes
+precedence over excludes (see -X ... and -x ...).
+
+.SH "EXIT STATUS"
+.TP 4
+.B 0
+on success.
+.TP
+.B 1
+if an unexpected error occurred during the start (other problem).
+.TP
+.B 96
+if an invalid option or option value got passed (config problem).
+.TP
+.B 100
+if the logfile is not writable or port access is not allowed (permission problem).
+
+.SH "ENVIRONMENT"
+
+.TP 4
+.B PROM_LOG_LEVEL
+If no verbosity level got specified via option \fB-v\ \fI...\fR, this
+environment variable gets checked for a verbosity value. If there is a
+valid one, the verbosity level gets set accordingly, otherwise \fBINFO\fR
+level will be used.
+
+.SH "FILES"
+.TP 4
+.B /dev/kstat
+The character special devices used to fetch OS/kernel statistics.
+.TP 4
+.B /dev/kmem
+The character special devices used to fetch memory related statistics.
+
+.SH "BUGS"
+https://github.com/jelmd/solmex is the official source code repository
+for \fBsolmex\fR.  If you need some new features, or metrics, or bug fixes,
+please feel free to create an issue there using
+https://github.com/jelmd/solmex/issues .
+
+.SH "AUTHORS"
+Jens Elkner
+
+.SH "SEE ALSO"
+[1]\ https://prometheus.io/docs/instrumenting/exposition_formats/
+.br
+[2]\ https://grafana.com/
+.br
+[3]\ https://www.netdata.cloud/
+.br
+[4]\ https://www.zabbix.com/
+.\" # vim: ts=4 sw=4 filetype=nroff
