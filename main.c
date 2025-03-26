@@ -17,13 +17,14 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <regex.h>
+#include <stdio.h>
 
 #include <prom.h>
 #include <microhttpd.h>
 
-#include "common.h"
 #include "init.h"
 #include "dmi.h"
+#include "boottime.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -151,6 +152,9 @@ collect(prom_collector_t *self) {
 		getVersions(sb, compact);
 	if (!global.ncfg.no_dmi) {
 		collect_dmi(sb, compact);
+	}
+	if (!global.ncfg.no_kstats) {
+		collect_boottime(sb, compact);
 	}
 	if (sb != NULL && !compact)
 		psb_add_char(sb, '\n');
