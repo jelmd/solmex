@@ -23,7 +23,7 @@
 
 #include "common.h"
 #include "init.h"
-#include "prom_node.h"
+#include "dmi.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -74,6 +74,7 @@ static struct {
 	uint16_t port;
 	bool versionInfo;
 	bool ipv6;
+	bool no_node;
 	node_cfg_t ncfg;
 } global = {
 	.req_counter = NULL,
@@ -87,8 +88,10 @@ static struct {
 	.versionInfo = true,
 	.verbose = 0,
 	.ipv6 = false,
+	.no_node = false,
 	.ncfg = {
-		.no_node = false,
+		.no_dmi = false,
+		.no_kstats = false,
 		.exc_metrics = NULL,
 		.exc_sensors = NULL,
 		.inc_metrics = NULL,
@@ -118,9 +121,11 @@ disableMetrics(char *skipList) {
 				global.promflags &= ~PROM_PROCESS;
 			else if (strcmp(s, "version") == 0)
 				global.versionInfo = false;
-			else if (strcmp(s, "node") == 0)
-				global.ncfg.no_node = true;
-			else {
+			else if (strcmp(s, "node") == 0) {
+				global.no_node = true;
+				global.ncfg.no_dmi = true;
+				global.ncfg.no_kstats = true;
+			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
 			}
@@ -144,8 +149,8 @@ collect(prom_collector_t *self) {
 	PROM_DEBUG("collector: %p  sb: %p", self, sb);
 	if (global.versionInfo)
 		getVersions(sb, compact);
-	if (!global.ncfg.no_node) {
-		collect_node(sb, compact);
+	if (!global.ncfg.no_dmi) {
+		collect_dmi(sb, compact);
 	}
 	if (sb != NULL && !compact)
 		psb_add_char(sb, '\n');

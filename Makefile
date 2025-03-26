@@ -57,7 +57,7 @@ CFLAGS += -std=c11 -DVERSION=\"$(VERSION)\"
 CFLAGS += -DPROM_LOG_ENABLE -D_XOPEN_SOURCE=600
 CFLAGS += $(CFLAGS_$(OS)) $(DEBUG_FLAGS) -DISSUES_URL=\"$(ISSUES_URL)\"
 
-LIBS_SunOS = -lsocket -lnsl -lm
+LIBS_SunOS = -lsmbios -lsocket -lnsl -lm
 #LIBS_libprom += $(shell [ -d ../libprom/prom/build ] && printf -- '-L ../libprom/prom/build' )
 LIBS ?= $(LIBS_$(OS)) $(LIBS_libprom)
 LIBS += -lmicrohttpd -lprom
@@ -83,7 +83,7 @@ PROGS= solmex
 PROGSRCS = $(LIBSRCS)
 PROGOBJS = $(PROGSRCS:%.c=%.o)
 
-MEXOBJS = init.o prom_node.o main.o
+MEXOBJS = dmi.o init.o main.o
 
 all:	$(PROGS)
 

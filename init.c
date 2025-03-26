@@ -10,13 +10,13 @@
  */
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <prom.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "init.h"
-
-#include "prom_node.h"
 
 static uint8_t started = 0;
 
@@ -28,16 +28,36 @@ static char *versionHR = NULL;		// version string emitted to stdout/stderr
 
 void
 start(node_cfg_t *cfg, bool compact, uint32_t *tasks) {
-	*tasks = 0;
+	struct stat sbuf;
+	int status;
+
 	if (started)
 		return;
 
-	if (cfg->no_node)
-		return;
+	*tasks = 0;
+	if (!cfg->no_dmi) {
+		if (((status = lstat("/dev/smbios", &sbuf)) != 0)
+			|| (sbuf.st_mode & S_IFLNK) != S_IFLNK)
+		{
+			PROM_WARN("'/dev/smbios' symlink not found. DMI infos n/a.", "");
+			cfg->no_dmi = true;
+		} else {
+			(*tasks)++;
+		}
+	}
+	if (!cfg->no_kstats) {
+		if (((status = lstat("/dev/kstat", &sbuf)) != 0)
+			|| (sbuf.st_mode & S_IFLNK) != S_IFLNK)
+		{
+			PROM_WARN("'/dev/kstat' symlink not found. Kernel stats n/a.", "");
+			cfg->no_kstats = true;
+		} else {
+			(*tasks)++;
+		}
+	}
 
 	if (!compact)
-		PROM_INFO("node stack initialized (%d)", *tasks);
-	(*tasks)++;
+	PROM_INFO("node task initialized (%d)", *tasks);
 
 	started = 1;
 }

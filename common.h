@@ -18,17 +18,19 @@
 #include <stdbool.h>
 #include <regex.h>
 
-#include <prom_string_builder.h>
-#include <prom_log.h>
+#include <libprom/prom_string_builder.h>
+#include <libprom/prom_log.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define MBUF_SZ 256
+#define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
 
 typedef struct node_cfg {
-	bool no_node;
+	bool no_dmi;
+	bool no_kstats;
 	regex_t *exc_metrics;
 	regex_t *exc_sensors;
 	regex_t *inc_metrics;
@@ -47,9 +49,11 @@ typedef struct node_cfg {
 #define SOLMEXM_VERS_T "gauge"
 #define SOLMEXM_VERS_N "solmex_version"
 
-#define SOLMEXM_NODE_D "Node statistics "
-#define SOLMEXM_NODE_T "gauge"
-#define SOLMEXM_NODE_N "solmex_node"
+// most of names and types are choosen to be node-exporter compatible, even so
+// there are many misnomers and disagreements wrt. type ;-)
+#define SOLMEXM_DMI_D "A constant metric with label entries deduced from the DMI (see smbios(1M) type 0 .. 5). Always 1."
+#define SOLMEXM_DMI_T "gauge"
+#define SOLMEXM_DMI_N "solmex_node_dmi_info"
 
 /*
 #define SOLMEXM_XXX_D "short description."
