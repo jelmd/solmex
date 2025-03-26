@@ -55,6 +55,10 @@ typedef struct node_cfg {
 #define SOLMEXM_DMI_T "gauge"
 #define SOLMEXM_DMI_N "solmex_node_dmi_info"
 
+#define SOLMEXM_BOOTTIME_D "OS boot time, in seconds since the Epoch (00:00:00 UTC, January 1, 1970). Constant for the lifetime of the app."
+#define SOLMEXM_BOOTTIME_T "gauge"
+#define SOLMEXM_BOOTTIME_N "solmex_node_boot_time_seconds"
+
 /*
 #define SOLMEXM_XXX_D "short description."
 #define SOLMEXM_XXX_T "gauge"
