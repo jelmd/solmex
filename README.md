@@ -41,4 +41,5 @@ to overwrite this one by using a 4th digit > 0.
 
 
 ## Packages
+
 Solaris packages for libprom and solmex can be found via https://pkg.cs.ovgu.de/LNF/i386/5.11 (search for LNFlibprom and LNFsolmex). libmicrohttpd gets provided by Solaris itself, so using the vendor package is recommended (library/libmicrohttpd). Related header sources files get installed, if the develop facet is set to true.
