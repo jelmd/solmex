@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <smbios.h>
+#include <ctype.h>
 
 #include <libprom/prom.h>
 
@@ -93,6 +94,43 @@ typedef struct smbios_cpu {
 
 static smbios_cpu_t cpu_info[MAX_CPUS];
 
+static char *
+strtrimdup(const char *str) {
+	size_t len;
+	char *t, *s;
+
+	if (str == NULL)
+		return NULL;
+	len = strlen(str);
+	if (len == 0)
+		return NULL;
+
+	s = strdup(str);
+	t = s + len;
+	while (t > s) {
+		t--;
+		if (!isspace(t[0]))
+			break;
+		t[0] = '\0';
+	}
+	if (s[0] == '\0') {
+		free(s);
+		return NULL;
+	}
+	// they are usually pretty small so do not re-allocate, even if shortened
+	while (t > s) {
+		t--;
+		if (isspace(t[0])) {
+			t[0] = ' ';		// replace all *tabs, CRs LFs with a whitespace
+			continue;
+		}
+		// replace " with single quote char to make it attr val safe
+		if (t[0] == '"')
+			t[0] = '\'';
+	}
+	return s;
+}
+
 static int
 cacheSize(smbios_hdl_t *shp, id_t biosID) {
 	smbios_struct_t lcp;
@@ -152,15 +190,15 @@ copyBiosInfo(smbios_hdl_t *shp) {
 
 	if ((id = smbios_info_bios(shp, &bios)) != SMB_ERR) {
 		if (bios.smbb_vendor[0] != '\0') {
-			dmi[BIOS_VENDOR] = strdup(bios.smbb_vendor);
+			dmi[BIOS_VENDOR] = strtrimdup(bios.smbb_vendor);
 			n++;
 		}
 		if (bios.smbb_version[0] != '\0') {
-			dmi[BIOS_VERSION] = strdup(bios.smbb_version);
+			dmi[BIOS_VERSION] = strtrimdup(bios.smbb_version);
 			n++;
 		}
 		if (bios.smbb_reldate[0] != '\0') {
-			dmi[BIOS_DATE] = strdup(bios.smbb_reldate);
+			dmi[BIOS_DATE] = strtrimdup(bios.smbb_reldate);
 			n++;
 		}
 		// Per spec only supported if both != 0xFF
@@ -187,23 +225,23 @@ copyProductInfo(smbios_hdl_t *shp) {
 		smbios_info_common(shp, id, &info) != SMB_ERR)
 	{
 		if (info.smbi_manufacturer[0] != '\0') {
-			dmi[SYSTEM_VENDOR] = strdup(info.smbi_manufacturer);
+			dmi[SYSTEM_VENDOR] = strtrimdup(info.smbi_manufacturer);
 			n++;
 		}
 		if (info.smbi_product[0] != '\0') {
-			dmi[PRODUCT_NAME] = strdup(info.smbi_product);
+			dmi[PRODUCT_NAME] = strtrimdup(info.smbi_product);
 			n++;
 		}
 		if (info.smbi_version[0] != '\0') {
-			dmi[PRODUCT_VERSION] = strdup(info.smbi_version);
+			dmi[PRODUCT_VERSION] = strtrimdup(info.smbi_version);
 			n++;
 		}
 		if (sys.smbs_sku[0] != '\0') {
-			dmi[PRODUCT_SKU] = strdup(sys.smbs_sku);
+			dmi[PRODUCT_SKU] = strtrimdup(sys.smbs_sku);
 			n++;
 		}
 		if (sys.smbs_family[0] != '\0') {
-			dmi[PRODUCT_FAMILY] = strdup(sys.smbs_family);
+			dmi[PRODUCT_FAMILY] = strtrimdup(sys.smbs_family);
 			n++;
 		}
 	}
@@ -219,19 +257,19 @@ copyBaseboardInfo(smbios_hdl_t *shp) {
 	if (smbios_info_common(shp, 2, &info) == 0) {
 		if (info.smbi_manufacturer)
 		if (info.smbi_manufacturer[0] != '\0') {
-			dmi[BOARD_VENDOR] = strdup(info.smbi_manufacturer);
+			dmi[BOARD_VENDOR] = strtrimdup(info.smbi_manufacturer);
 			n++;
 		}
 		if (info.smbi_product[0] != '\0') {
-			dmi[BOARD_NAME] = strdup(info.smbi_product);
+			dmi[BOARD_NAME] = strtrimdup(info.smbi_product);
 			n++;
 		}
 		if (info.smbi_version[0] != '\0') {
-			dmi[BOARD_REVISON] = strdup(info.smbi_version);
+			dmi[BOARD_REVISON] = strtrimdup(info.smbi_version);
 			n++;
 		}
 		if (info.smbi_asset[0] != '\0') {
-			dmi[BOARD_ASSET] = strdup(info.smbi_asset);
+			dmi[BOARD_ASSET] = strtrimdup(info.smbi_asset);
 			n++;
 		}
 	}
@@ -252,15 +290,15 @@ copyChassisInfo(smbios_hdl_t *shp, int id) {
 	if (smbios_info_common(shp, id, &info) == 0) {
 		if (info.smbi_manufacturer)
 		if (info.smbi_manufacturer[0] != '\0') {
-			dmi[CHASSIS_VENDOR] = strdup(info.smbi_manufacturer);
+			dmi[CHASSIS_VENDOR] = strtrimdup(info.smbi_manufacturer);
 			n++;
 		}
 		if (info.smbi_version[0] != '\0') {
-			dmi[CHASSIS_VERSION] = strdup(info.smbi_version);
+			dmi[CHASSIS_VERSION] = strtrimdup(info.smbi_version);
 			n++;
 		}
 		if (info.smbi_asset[0] != '\0') {
-			dmi[CHASSIS_ASSET] = strdup(info.smbi_asset);
+			dmi[CHASSIS_ASSET] = strtrimdup(info.smbi_asset);
 			n++;
 		}
 	}
