@@ -23,7 +23,38 @@
 extern "C" {
 #endif
 
+/**
+ * Collect DMI related metrics. For now they are all static, so once called it
+ * will always append the same metric string to the given buffer.
+ *
+ * @param sb	where to append the metric results.
+ * @param compact	whether to add HELP and TYPE comments.
+ */
 void collect_dmi(psb_t *sb, bool compact);
+
+/**
+ * Get the cache size in bytes of the CPU with the given number.
+ *
+ * NOTE: Since it causes lazy init of smbios related static metrics one should
+ *   call collect_dmi(...) first, if it is intended to be used, too.
+ *
+ * @param cpuNum	The number of the CPU to lookup. CPUs get enumerated in the
+ * 	same order as found via smbios(1M).
+ */
+int64_t get_cache_size(uint8_t cpuNum);
+
+/**
+ * Get the max speed in Hz of the CPU with the given number. On Solaris this is
+ * usually the CPU internal value. It might be higher (a turbo speed) than what
+ * 'kstat cpu_info:::supported_frequencies_Hz' reveals.
+ *
+ * NOTE: Since it causes lazy init of smbios related static metrics one should
+ *   call collect_dmi(...) first, if it is intended to be used, too.
+ *
+ * @param cpuNum	The number of the CPU to lookup. CPUs get enumerated in the
+ * 	same order as found via smbios(1M).
+ */
+int64_t get_turbo_speed(uint8_t cpuNum);
 
 #ifdef __cplusplus
 }

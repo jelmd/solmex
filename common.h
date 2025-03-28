@@ -25,6 +25,9 @@
 extern "C" {
 #endif
 
+/** max. number of CPUs in a system. 8 is probably in most cases sufficient. */
+#define MAX_CPUS 64
+
 #define MBUF_SZ 256
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
 
@@ -58,6 +61,10 @@ typedef struct node_cfg {
 #define SOLMEXM_BOOTTIME_D "OS boot time, in seconds since the Epoch (00:00:00 UTC, January 1, 1970). Constant for the lifetime of the app."
 #define SOLMEXM_BOOTTIME_T "gauge"
 #define SOLMEXM_BOOTTIME_N "solmex_node_boot_time_seconds"
+
+#define SOLMEXM_CPUINFO_D "Information about system CPUs. Constant for the lifetime of the app. Always 1."
+#define SOLMEXM_CPUINFO_T "gauge"
+#define SOLMEXM_CPUINFO_N "solmex_node_cpu_info"
 
 /*
 #define SOLMEXM_XXX_D "short description."
