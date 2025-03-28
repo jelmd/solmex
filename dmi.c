@@ -47,7 +47,6 @@ typedef enum {
 	CHASSIS_VENDOR,		// chassis_vendor="Default string"
 	CHASSIS_VERSION,	// chassis_version="Default string"
 	CHASSIS_ASSET,		// chassis_asset_tag="Default string"
-	// the CPU infos provided by libsmbios are not sufficient => use kstats
 
 	// last entry: do not use
 	DMI_INFO_SZ			// reserved
@@ -78,7 +77,71 @@ static const char *DMI_ATTR[] = {
 
 static char *dmi[DMI_INFO_SZ];		// automagically initialized with NULL
 static bool hasType[4];				// automagically initialized with false
+static uint8_t cpu_count = 0;
 static bool initialized = false;
+
+typedef struct smbios_cpu {
+	id_t id;				/* id 0 is always the BIOS information */
+	// clkspeed is usually 'Unknown' and therefore no help
+	// core*  same thing with - always 0
+	uint32_t maxspeed;		/* maximum speed [MHz] */
+	uint32_t l1_size;		/* level 1 cache size [bytes] */
+	uint32_t l2_size;		/* level 2 cache size [bytes] */
+	uint32_t l3_size;		/* level 3 cache size [bytes] */
+	bool enabled;			/* whether this CPU is enabled */
+} smbios_cpu_t;
+
+static smbios_cpu_t cpu_info[MAX_CPUS];
+
+static int
+cacheSize(smbios_hdl_t *shp, id_t biosID) {
+	smbios_struct_t lcp;
+	smbios_cache_t cache;
+
+	if (biosID < 1)
+		return 0;
+	if (smbios_lookup_id(shp, biosID, &lcp) == SMB_ERR)
+		return 0;
+	if (smbios_info_cache(shp, biosID, &cache) == SMB_ERR)
+		return 0;
+
+	return (cache.smba_maxsize > 0) ? cache.smba_size : 0;
+}
+
+static int
+recordCpu(smbios_hdl_t *shp, const smbios_struct_t *sp, void *arg) {
+	(void) arg;					// make gcc happy
+	smbios_processor_t info;
+	uint8_t status;
+	smbios_cpu_t *ci;
+
+	// returning anything != 0 would stop iteration over smbios chain.
+	if (sp->smbstr_type != SMB_TYPE_PROCESSOR)
+		return 0;
+	if (cpu_count == MAX_CPUS) {
+		PROM_WARN("Max. number of supported CPUs reached (%d)). Bios entry %d "
+			"(and all subsequent) ignored.", MAX_CPUS, sp->smbstr_id);
+		return 1;	// stop iteration
+	}
+	if (smbios_info_processor(shp, sp->smbstr_id, &info) != 0) {
+		PROM_WARN("Ooops! Data error for BIOS entry %s.", sp->smbstr_id);
+		return 0;
+	}
+	if (!SMB_PRSTATUS_PRESENT(info.smbp_status))
+		return 0;
+
+	ci = &cpu_info[cpu_count];
+	cpu_count++;
+
+	ci->id = sp->smbstr_id;
+	ci->maxspeed = info.smbp_maxspeed;
+	ci->l1_size = cacheSize(shp, info.smbp_l1cache);
+	ci->l2_size = cacheSize(shp, info.smbp_l2cache);
+	ci->l3_size = cacheSize(shp, info.smbp_l3cache);
+	status = SMB_PRSTATUS_STATUS(info.smbp_status);
+	ci->enabled = (status == SMB_PRS_ENABLED) || (status == SMB_PRS_IDLE);
+	return 0;
+}
 
 static void
 copyBiosInfo(smbios_hdl_t *shp) {
@@ -231,6 +294,7 @@ buildMetric(psb_t *sb, bool compact) {
 		copyProductInfo(shp);
 		n = copyBaseboardInfo(shp);
 		copyChassisInfo(shp, n);
+		smbios_iter(shp, recordCpu, NULL);
 
 		psb_add_str(sb, SOLMEXM_DMI_N "{");
 		n = ARRAY_SIZE(dmi);
@@ -262,6 +326,35 @@ buildMetric(psb_t *sb, bool compact) {
 	metric = strdup(buf + sz);
 	free(buf);
 	initialized = true;
+}
+
+int64_t
+get_cache_size(uint8_t cpuNum) {
+	if (!initialized) {
+		psb_t *sb = psb_new();
+		// if dmi collector is disabled, it got not called yet
+		collect_dmi(sb, true);
+		psb_destroy(sb);
+	}
+	if (cpuNum >= cpu_count)
+		return -1;
+
+	smbios_cpu_t *c = &cpu_info[cpuNum];
+	return c->l3_size != 0 ? c->l3_size : (c->l2_size > 0 ? c->l2_size : c->l1_size);
+}
+
+int64_t
+get_turbo_speed(uint8_t cpuNum) {
+	if (initialized) {
+		psb_t *sb = psb_new();
+		// if dmi collector is disabled, it got not called yet
+		collect_dmi(sb, true);
+		psb_destroy(sb);
+	}
+	if (cpuNum >= cpu_count)
+		return -1;
+
+	return cpu_info[cpuNum].maxspeed * 1e6;
 }
 
 void

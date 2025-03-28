@@ -25,6 +25,7 @@
 #include "init.h"
 #include "dmi.h"
 #include "boottime.h"
+#include "cpuinfo.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -155,6 +156,7 @@ collect(prom_collector_t *self) {
 	}
 	if (!global.ncfg.no_kstats) {
 		collect_boottime(sb, compact);
+		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
 	}
 	if (sb != NULL && !compact)
 		psb_add_char(sb, '\n');
