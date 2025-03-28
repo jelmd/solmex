@@ -40,6 +40,106 @@ static uint8_t cpu_count = 0;
 
 static bool initialized = false;
 
+static char *
+trimCpuModel(const char *brand) {
+	char *s, *t;
+	size_t len;
+	int c;
+
+	if (brand == NULL || (len = strlen(brand)) == 0)
+		return NULL;
+
+	s = strdup(brand);
+	t = s + len - 2;
+	c = 2;
+	if (t[0] == 'H' && t[1] == 'z') {
+		// strip off the ' @  3.30GHz' - freq* attr contains this info already
+		while (t >= s) {
+			t--;
+			c++;
+			if (t[0] == ' ') {
+				c = -(c + 1);
+				t--;
+				// cut off the trailing '@'
+				while (t >= s && t[0] != ' ') {
+					t--;
+					c--;
+				}
+				// remove trailing whitespaces
+				while (t >= s && t[0] == ' ') {
+					t--;
+					c--;
+				}
+				t++;
+				c++;
+				if (t - 2 > s && t[-1] == '0' && t[-2] == ' ')
+					c -= 2;		// trailing ' 0' on Intel CPUs
+				break;
+			}
+		}
+		if (c < 0) {
+			len += c;
+			s[len] = '\0';
+		}
+	}
+	t = s + len - 3;
+	// s|\(R|r|TM|tm\)| (CPU|Processor)||g
+	while (t > s) {
+		t--;
+		if (t[0] == '(') {
+			if ((t[1] == 'r' || t[1] == 'R') && t[2] == ')') {
+				memmove(t, t+3, len - (t + 3 - s) + 1);
+				t -= 3;
+				len -= 3;
+			} else if ((t[1] == 't' || t[1] == 'T')
+				&& (t[2] == 'm' || t[2] == 'M')  && t[3] == ')')
+			{
+				memmove(t, t+4, len - (t + 4 - s) + 1);
+				t -= 3;
+				len -= 4;
+			}
+			continue;
+		}
+		if (t[0] == 'C' && t[1] == 'P' && t[2] == 'U' && t > s && t[-1] == ' ') {
+			memmove(t-1, t+3, len - (t + 3 - s) + 1);
+			t -= 3;
+			len -= 4;
+		}
+		if (t[0] == 'P' && (strncmp(t+1, "rocessor", 8) == 0) && t > s && t[-1] == ' ') {
+			memmove(t-1, t+9, len - (t + 9 - s) + 1);
+			len -= 9;
+		}
+	}
+	// s| [^ ]*-Core$||
+	if (len > 5 && strcmp(s + len - 5, "-Core") == 0) {
+		t = s + len - 6;
+		while (t >= s && t[0] != ' ')
+			t--;
+		if (t > s) {
+			t[0] = '\0';
+			len = t - s;
+		}
+	}
+	// finaly s|  +| |g
+	t = s;
+	while (t < (s + len)) {
+		char *p;
+		if (t[0] == ' ') {
+			p = t;
+			t++;
+			while (t[0] == ' ')
+				t++;
+			c = t - p;
+			if (c > 1) {
+				memmove(p + 1, t, (s + len) - t + 1);
+				len -= c;
+			}
+		}
+		t++;
+	}
+	return s;
+}
+
 static bool
 addSpeedInfo(psb_t *sb, const char *frequencies, uint8_t cpuNum) {
 	int64_t min = -1, max = -1, turbo_speed = get_turbo_speed(cpuNum);
@@ -93,7 +193,7 @@ addCpuInfo(psb_t *sb, size_t sz, kstat_t *ksp, uint chip_id) {
 
 	psb_truncate(sb, sz);
 	psb_add_str(sb, SOLMEXM_CPUINFO_N "{package=\"");
-	sprintf(buf, "%d", chip_id);
+	sprintf(buf, "%u", chip_id);
 	psb_add_str(sb, buf);
 	psb_add_str(sb, "\",");
 	cache_sz = get_cache_size(cpu_count);
@@ -107,9 +207,13 @@ addCpuInfo(psb_t *sb, size_t sz, kstat_t *ksp, uint chip_id) {
 		// NOTE: There is no safe way anymore to extract the CPU 'microcode'
 		// version on Solaris. Also usually not needed, so don't care. ;-)
 		if (strcmp(knp->name, "brand") == 0) {
-			psb_add_str(sb, "model_name=\"");
-			psb_add_str(sb, KSTAT_NAMED_STR_PTR(knp));
-			psb_add_str(sb, "\",");
+			s = trimCpuModel(KSTAT_NAMED_STR_PTR(knp));
+			if (s != NULL) {
+				psb_add_str(sb, "model_name=\"");
+				psb_add_str(sb, s);
+				psb_add_str(sb, "\",");
+				free(s);
+			}
 		} else if (strcmp(knp->name, "family") == 0) {
 			psb_add_str(sb, "family=\"");
 			sprintf(buf, "%d", knp->value.i32);
