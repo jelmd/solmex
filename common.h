@@ -28,12 +28,17 @@ extern "C" {
 /** max. number of CPUs in a system. 8 is probably in most cases sufficient. */
 #define MAX_CPUS 64
 
+/** The number of CPU strands alias hyperthreads on the system. */
+extern uint8_t system_cpu_count;
+
 #define MBUF_SZ 256
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
 
 typedef struct node_cfg {
 	bool no_dmi;
 	bool no_kstats;
+	bool no_load;
+	bool no_cpu_state;
 	regex_t *exc_metrics;
 	regex_t *exc_sensors;
 	regex_t *inc_metrics;
@@ -65,6 +70,22 @@ typedef struct node_cfg {
 #define SOLMEXM_CPUINFO_D "Information about system CPUs. Constant for the lifetime of the app. Always 1."
 #define SOLMEXM_CPUINFO_T "gauge"
 #define SOLMEXM_CPUINFO_N "solmex_node_cpu_info"
+
+#define SOLMEXM_LOAD1_D "Number of processes in the system run queue as average over the last minute."
+#define SOLMEXM_LOAD1_T "gauge"
+#define SOLMEXM_LOAD1_N "solmex_node_load1"
+
+#define SOLMEXM_LOAD5_D "Number of processes in the system run queue as average over the last 5 minutes."
+#define SOLMEXM_LOAD5_T "gauge"
+#define SOLMEXM_LOAD5_N "solmex_node_load5"
+
+#define SOLMEXM_LOAD15_D "Number of processes in the system run queue as average over the last 15 minutes."
+#define SOLMEXM_LOAD15_T "gauge"
+#define SOLMEXM_LOAD15_N "solmex_node_load15"
+
+#define SOLMEXM_CPUSTATE_D "Total number of CPU strands alias hyperthreads in the system."
+#define SOLMEXM_CPUSTATE_T "gauge"
+#define SOLMEXM_CPUSTATE_N "solmex_node_cpus_total"
 
 /*
 #define SOLMEXM_XXX_D "short description."
