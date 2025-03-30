@@ -18,14 +18,17 @@
 #include <fcntl.h>
 #include <regex.h>
 #include <stdio.h>
+#include <kstat.h>
 
 #include <prom.h>
 #include <microhttpd.h>
 
+#include "ks_util.h"
 #include "init.h"
 #include "dmi.h"
 #include "boottime.h"
 #include "cpuinfo.h"
+#include "load.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -94,12 +97,17 @@ static struct {
 	.ncfg = {
 		.no_dmi = false,
 		.no_kstats = false,
+		.no_load = false,
+		.no_cpu_state = false,
 		.exc_metrics = NULL,
 		.exc_sensors = NULL,
 		.inc_metrics = NULL,
 		.inc_sensors = NULL
 	}
 };
+
+/** The number of CPU strands alias hyperthreads on the system. */
+uint8_t system_cpu_count = 0;
 
 static int
 disableMetrics(char *skipList) {
@@ -125,6 +133,7 @@ disableMetrics(char *skipList) {
 				global.versionInfo = false;
 			else if (strcmp(s, "node") == 0) {
 				global.no_node = true;
+				global.ncfg.no_cpu_state = true;
 				global.ncfg.no_dmi = true;
 				global.ncfg.no_kstats = true;
 			} else {
@@ -144,10 +153,20 @@ disableMetrics(char *skipList) {
 
 // Just in case, someone switches to MHD_USE_THREAD_PER_CONNECTION
 static _Thread_local psb_t *sb = NULL;
+// For now not thread local because we want to keep it open and avoid
+// re-allocating all the ressource again and again. If someone enables
+// MHD_USE_THREAD_PER_CONNECTION, kstat_chain_update() may change the kstat
+// chain: it removes/fress obsolete records first and adds new ones after it, so
+// enough potential to let concurrent reads explode. So if threadings is needed,
+// it is better to implement a pool kc, which gets adjusted as needed. ...
+static /* _Thread_local */ kstat_ctl_t *kc = NULL;
+static short kstat_err_count = 0;
 
 static prom_map_t *
 collect(prom_collector_t *self) {
 	bool compact = global.promflags & PROM_COMPACT;
+	kstat_ctl_t *kc_new;
+
 	PROM_DEBUG("collector: %p  sb: %p", self, sb);
 	if (global.versionInfo)
 		getVersions(sb, compact);
@@ -155,8 +174,30 @@ collect(prom_collector_t *self) {
 		collect_dmi(sb, compact);
 	}
 	if (!global.ncfg.no_kstats) {
+		// static stuff
 		collect_boottime(sb, compact);
 		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
+		if (!global.ncfg.no_load && global.ncfg.no_cpu_state)
+			collect_load(sb, compact, NULL, 0);
+		if ((kc_new = ks_chain_open_or_update(kc)) != NULL) {
+			hrtime_t now = gethrtime();
+			kc = kc_new;
+			kstat_err_count = 0;
+			if (!global.ncfg.no_load && !global.ncfg.no_cpu_state)
+				collect_load(sb, compact, kc, global.ncfg.no_cpu_state ? now : -now);
+			if (!global.ncfg.no_cpu_state)
+				collect_cpu_state(sb, compact, kc, now);
+		} else {
+			kstat_err_count++;
+			if (kstat_err_count > 10) {
+				PROM_WARN("kstat collectors disabled dueto %d repeated "
+					"errors. Restart the app if the problem got fixed.",
+					kstat_err_count);
+				global.ncfg.no_kstats = true;
+				kstat_close(kc);
+				kc = NULL;
+			}
+		}
 	}
 	if (sb != NULL && !compact)
 		psb_add_char(sb, '\n');

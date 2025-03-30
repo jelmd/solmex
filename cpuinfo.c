@@ -19,6 +19,7 @@
 #include <libprom/prom.h>
 
 #include "cpuinfo.h"
+#include "ks_util.h"
 #include "dmi.h"
 
 // see also:
@@ -272,7 +273,6 @@ static void
 buildInfoMetric(psb_t *sb) {
 	kstat_ctl_t *kc = NULL;
 	kstat_t *ksp;
-	kid_t kid;
 	kstat_named_t *knp;
 
 	size_t sz;
@@ -301,30 +301,21 @@ buildInfoMetric(psb_t *sb) {
 #pragma GCC diagnostic pop
 		PROM_WARN("kstat cpu_info n/a", "")
 	} else {
+		uint8_t n = 0;
 		// we got the pointer to the first 'cpu_info' match. Now we need to
 		// go through all remaining records in the chain to find additional
 		// records
-		for (ksp = kc->kc_chain; ksp; ksp = ksp->ks_next) {
+		for (; ksp; ksp = ksp->ks_next) {
 			if (strcmp(ksp->ks_module, "cpu_info") != 0)
 				continue;
-			// fill ksp
-			while ((kid = kstat_read(kc, ksp, NULL)) == -1) {
-				if (errno == EAGAIN) {
-					(void) poll(NULL, 0, 200);
-				} else {
-					buf = strerror(errno);
-					PROM_WARN("kstat cpu_info:%d:%s read error: %s",
-						ksp->ks_instance, ksp->ks_name, buf)
-					break;
-				}
-			}
-			if (kid == -1)
+			if (ks_read(kc, ksp, 0) == NULL)
 				continue;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 			if ((knp = kstat_data_lookup(ksp, "chip_id")) == NULL)
 				continue;	// should not happen
 #pragma GCC diagnostic pop
+			n++;
 			if (knp->value.i64 >= MAX_CPUS) {
 				PROM_WARN("kstat cpu_info:%d:%s:chip_id is ignored (%ld > %d)",
 					ksp->ks_instance, ksp->ks_name, knp->value.i64, MAX_CPUS - 1);
@@ -335,6 +326,7 @@ buildInfoMetric(psb_t *sb) {
 				continue;
 			addCpuInfo(sb, sz, ksp, chip_id);
 		}
+		system_cpu_count = n;
 	}
 	psb_truncate(sb, sz);
 }
