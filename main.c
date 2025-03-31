@@ -29,6 +29,7 @@
 #include "boottime.h"
 #include "cpuinfo.h"
 #include "load.h"
+#include "cpu_speed.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -99,6 +100,8 @@ static struct {
 		.no_kstats = false,
 		.no_load = false,
 		.no_cpu_state = false,
+		.no_cpu_speed = false,
+		.no_cpu_speed_max = false,
 		.exc_metrics = NULL,
 		.exc_sensors = NULL,
 		.inc_metrics = NULL,
@@ -187,6 +190,8 @@ collect(prom_collector_t *self) {
 				collect_load(sb, compact, kc, global.ncfg.no_cpu_state ? now : -now);
 			if (!global.ncfg.no_cpu_state)
 				collect_cpu_state(sb, compact, kc, now);
+			if (!global.ncfg.no_cpu_speed)
+				collect_cpu_speed(sb, compact, kc, now, !global.ncfg.no_cpu_speed_max);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
