@@ -39,6 +39,8 @@ typedef struct node_cfg {
 	bool no_kstats;
 	bool no_load;
 	bool no_cpu_state;
+	bool no_cpu_speed;
+	bool no_cpu_speed_max;
 	regex_t *exc_metrics;
 	regex_t *exc_sensors;
 	regex_t *inc_metrics;
@@ -86,6 +88,14 @@ typedef struct node_cfg {
 #define SOLMEXM_CPUSTATE_D "Total number of CPU strands alias hyperthreads in the system."
 #define SOLMEXM_CPUSTATE_T "gauge"
 #define SOLMEXM_CPUSTATE_N "solmex_node_cpus_total"
+
+#define SOLMEXM_CPUSPEED_D "Current CPU strand alias thread frequency in hertz."
+#define SOLMEXM_CPUSPEED_T "gauge"
+#define SOLMEXM_CPUSPEED_N "solmex_node_cpu_frequency_hertz"
+
+#define SOLMEXM_CPUSPEEDMAX_D "Max. CPU strand alias thread frequency in hertz."
+#define SOLMEXM_CPUSPEEDMAX_T "gauge"
+#define SOLMEXM_CPUSPEEDMAX_N "solmex_node_cpu_frequency_max_hertz"
 
 /*
 #define SOLMEXM_XXX_D "short description."
