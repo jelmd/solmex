@@ -25,12 +25,10 @@
 extern "C" {
 #endif
 
-/** max. number of CPUs in a system. 8 is probably in most cases sufficient. */
-#define MAX_CPUS 64
-
-/** The number of CPU strands alias hyperthreads on the system. */
+/** The number of CPU strands alias hyperthreads found on the system when the
+ * first collector (cpu_info) got called. */
 extern uint16_t system_cpu_count;
-/** The max number of CPU strands alias hyperthreads supported on this system  */
+/** The max. CPU strand alias hyperthread ID supported on this system */
 extern uint16_t system_cpu_max;
 
 #define MBUF_SZ 256

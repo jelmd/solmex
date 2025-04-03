@@ -15,6 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <poll.h>
+#include <strings.h>
 
 #include <libprom/prom.h>
 
@@ -29,15 +30,18 @@
 //				   the OS starting with 0
 // pkg_core_id	.. the ID of the core wrt. to the owning CPU
 // core_id      .. the ID of the strand wrt. to the owning CPU
-// pg_id	    .. the ID of the core wrt. to the system
+// pg_id	    .. the ID of the core wrt. to the processor group
+// clog_id		.. the logical ID of the strand wrt. the core (AMD) or system
 // ncore_per_chip .. cores/cpu
 // ncpu_per_chip  .. strands/cpu
 
-static char *cpu_info[MAX_CPUS];
+static char **chip_info = NULL;
+static size_t chip_info_sz = 0;
 static uint64_t seen;
-#define HAVE_CPU(id)	(seen & (1 << (id)))
-#define ADD_CPU(id)		(seen |= (1 << (id)))
-static uint8_t cpu_count = 0;
+#define MAX_CHIP_ID		((8 << sizeof(seen)) - 1)
+#define HAVE_CHIP(id)	(seen & (1 << (id)))
+#define ADD_CHIP(id)		(seen |= (1 << (id)))
+static uint16_t chip_count;	// number of populated packages alias sockets found
 
 static bool initialized = false;
 
@@ -142,11 +146,15 @@ trimCpuModel(const char *brand) {
 }
 
 static bool
-addSpeedInfo(psb_t *sb, const char *frequencies, uint8_t cpuNum) {
+addSpeedInfo(psb_t *sb, const char *frequencies, uint16_t cpuNum) {
 	int64_t min = -1, max = -1, turbo_speed = get_turbo_speed(cpuNum);
 	char buf[32], *s, *t;
 	size_t len;
 
+	if (cpuNum > system_cpu_max) {
+		PROM_WARN("Probably a tinkered system - too many CPUs. %d ignored.", cpuNum);
+		return false;
+	}
 	if (frequencies != NULL) {
 		len = strlen(frequencies);
 
@@ -183,7 +191,7 @@ addSpeedInfo(psb_t *sb, const char *frequencies, uint8_t cpuNum) {
 	return true;
 }
 
-static void
+static int
 addCpuInfo(psb_t *sb, size_t sz, kstat_t *ksp, uint chip_id) {
 	kstat_named_t *knp;
 	char buf[32], *s, *t;
@@ -192,12 +200,44 @@ addCpuInfo(psb_t *sb, size_t sz, kstat_t *ksp, uint chip_id) {
 	int64_t cache_sz;
 	bool freq_done = false;
 
+	if (chip_count > system_cpu_max) {
+		PROM_WARN("kstat cpu_info:%d:%s:chip_id is ignored (%ld > %d)",
+			ksp->ks_instance, ksp->ks_name, chip_count, system_cpu_max);
+		return 1;
+	}
+
+	if (chip_info == NULL) {
+		chip_info = calloc(8, sizeof(char *));	// most systems have 8+ strands
+		if (chip_info == NULL) {
+			PROM_WARN("Memory problem in cpuinfo: %s", strerror(errno));
+			return 2;
+		}
+		chip_info_sz = 8;
+	} else if (chip_count == chip_info_sz) {
+		size_t nl = chip_info_sz << 1;
+		if ((nl - 1) > system_cpu_max)
+			nl = system_cpu_max + 1;
+		if (chip_count == nl) {
+			PROM_WARN("CPU limit reached in cpuinfo - cpu %d ignored", chip_count);
+			return 3;
+		}
+		char **p = realloc(chip_info, nl * sizeof(char *));
+		if (p == NULL ){
+			PROM_WARN("Memory problem in cpuinfo: %s - cpu %d ignored",
+				strerror(errno), chip_count);
+			return 4;
+		}
+		memset(&(p[chip_info_sz]), 0, (nl - chip_info_sz) * sizeof(char *));
+		chip_info = p;
+		chip_info_sz = nl;
+	}
+
 	psb_truncate(sb, sz);
 	psb_add_str(sb, SOLMEXM_CPUINFO_N "{package=\"");
 	sprintf(buf, "%u", chip_id);
 	psb_add_str(sb, buf);
 	psb_add_str(sb, "\",");
-	cache_sz = get_cache_size(cpu_count);
+	cache_sz = get_cache_size(chip_count);
 	if (cache_sz > 0) {
 		psb_add_str(sb, "cachesize=\"");
 		sprintf(buf, "%ld", cache_sz >> 10);
@@ -251,22 +291,28 @@ addCpuInfo(psb_t *sb, size_t sz, kstat_t *ksp, uint chip_id) {
 			psb_add_str(sb, buf);
 			psb_add_str(sb, "\",");
 		} else if (strcmp(knp->name, "supported_frequencies_Hz") == 0) {
-			freq_done = addSpeedInfo(sb, KSTAT_NAMED_STR_PTR(knp), cpu_count);
+			// we hope, that the OS enumerated the packages in the same order
+			// as the BIOS does.
+			freq_done = addSpeedInfo(sb, KSTAT_NAMED_STR_PTR(knp), chip_count);
 		} else if (strcmp(knp->name, "vendor_id") == 0) {
 			psb_add_str(sb, "vendor=\"");
 			psb_add_str(sb, KSTAT_NAMED_STR_PTR(knp));
 			psb_add_str(sb, "\",");
 		}
 	}
-	if (!freq_done)
-		addSpeedInfo(sb, NULL, cpu_count);
+	if (!freq_done) {
+		// we hope, that the OS enumerated the packages in the same order
+		// as the BIOS does.
+		addSpeedInfo(sb, NULL, chip_count);
+	}
 	n = psb_len(sb);
 	psb_truncate(sb, n - 1);
 	psb_add_str(sb, "} 1");
 	psb_add_char(sb,'\n');
-	cpu_info[cpu_count] = strdup(psb_str(sb) + sz);
-	cpu_count++;
-	ADD_CPU(chip_id);
+
+	chip_info[chip_count++] = strdup(psb_str(sb) + sz);
+	ADD_CHIP(chip_id);
+	return 0;
 }
 
 static void
@@ -301,7 +347,6 @@ buildInfoMetric(psb_t *sb) {
 #pragma GCC diagnostic pop
 		PROM_WARN("kstat cpu_info n/a", "")
 	} else {
-		uint8_t n = 0;
 		// we got the pointer to the first 'cpu_info' match. Now we need to
 		// go through all remaining records in the chain to find additional
 		// records
@@ -315,18 +360,16 @@ buildInfoMetric(psb_t *sb) {
 			if ((knp = kstat_data_lookup(ksp, "chip_id")) == NULL)
 				continue;	// should not happen
 #pragma GCC diagnostic pop
-			n++;
-			if (knp->value.i64 >= MAX_CPUS) {
+			chip_id = knp->value.i64;
+			if (chip_id > MAX_CHIP_ID) {
 				PROM_WARN("kstat cpu_info:%d:%s:chip_id is ignored (%ld > %d)",
-					ksp->ks_instance, ksp->ks_name, knp->value.i64, MAX_CPUS - 1);
+					ksp->ks_instance, ksp->ks_name, chip_id, MAX_CHIP_ID);
 				continue;
 			}
-			chip_id = knp->value.i64;
-			if (HAVE_CPU(chip_id))
+			if (HAVE_CHIP(chip_id))
 				continue;
 			addCpuInfo(sb, sz, ksp, chip_id);
 		}
-		system_cpu_count = n;
 	}
 	psb_truncate(sb, sz);
 }
@@ -346,9 +389,9 @@ collect_cpuinfo(psb_t *sb, bool compact) {
 
 	if (!compact)
 		addPromInfo(SOLMEXM_CPUINFO);
-	for (n = 0; n < cpu_count; n++) {
-		if (cpu_info[n] != NULL)
-			psb_add_str(sb, cpu_info[n]);
+	for (n = 0; n < chip_count; n++) {
+		if (chip_info[n] != NULL)
+			psb_add_str(sb, chip_info[n]);
 	}
 
 	if (free_sb) {
