@@ -31,6 +31,7 @@
 #include "load.h"
 #include "cpu_speed.h"
 #include "mem.h"
+#include "vmstat.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -47,6 +48,7 @@ typedef enum {
 
 static struct option options[] = {
 	{"no-scrapetime",		no_argument,		NULL, 'L'},
+	{"vmstats-mp",			no_argument,		NULL, 'M'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
 	{"version",				no_argument,		NULL, 'V'},
 	{"compact",				no_argument,		NULL, 'c'},
@@ -55,6 +57,7 @@ static struct option options[] = {
 	{"help",				no_argument,		NULL, 'h'},
 	{"logfile",				required_argument,	NULL, 'l'},
 	{"no-metrics",			required_argument,	NULL, 'n'},
+	{"vmstats",				required_argument,	NULL, 'm'},
 	{"port",				required_argument,	NULL, 'p'},
 	{"source",				required_argument,	NULL, 's'},
 	{"verbosity",			required_argument,	NULL, 'v'},
@@ -68,6 +71,22 @@ static struct option options[] = {
 static const char *shortUsage = {
 	"[-LSVcdfh] [-l file] [-n list] [-s ip] [-p port] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex] [-i mregex] [-I sregex]"
 };
+
+typedef struct node_cfg {
+	bool no_dmi;
+	bool no_kstats;
+	bool no_load;
+	bool no_cpu_state;
+	bool no_cpu_speed;
+	bool no_cpu_speed_max;
+	bool no_sys_mem;
+	vm_stat_quantity_t vmstat_type;
+	bool no_vmstat_mp;
+	regex_t *exc_metrics;
+	regex_t *exc_sensors;
+	regex_t *inc_metrics;
+	regex_t *inc_sensors;
+} node_cfg_t;
 
 static struct {
 	prom_counter_t *req_counter;
@@ -104,6 +123,8 @@ static struct {
 		.no_cpu_speed = false,
 		.no_cpu_speed_max = false,
 		.no_sys_mem = false,
+		.vmstat_type = VMSTAT_NORMAL,
+		.no_vmstat_mp = true,
 		.exc_metrics = NULL,
 		.exc_sensors = NULL,
 		.inc_metrics = NULL,
@@ -112,7 +133,8 @@ static struct {
 };
 
 /** The number of CPU strands alias hyperthreads on the system. */
-uint8_t system_cpu_count = 0;
+uint16_t system_cpu_count = 0;
+uint16_t system_cpu_max = 0;
 
 static int
 disableMetrics(char *skipList) {
@@ -138,9 +160,14 @@ disableMetrics(char *skipList) {
 				global.versionInfo = false;
 			else if (strcmp(s, "node") == 0) {
 				global.no_node = true;
-				global.ncfg.no_cpu_state = true;
+				// disable all children, too.
 				global.ncfg.no_dmi = true;
 				global.ncfg.no_kstats = true;
+				global.ncfg.no_load = true;
+				global.ncfg.no_cpu_state = true;
+				global.ncfg.no_cpu_speed = true;
+				global.ncfg.no_sys_mem = true;
+				global.ncfg.vmstat_type = VMSTAT_NONE;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -196,6 +223,9 @@ collect(prom_collector_t *self) {
 				collect_cpu_speed(sb, compact, kc, now, !global.ncfg.no_cpu_speed_max);
 			if (!global.ncfg.no_sys_mem)
 				collect_sys_mem(sb, compact, kc, now);
+			if (global.ncfg.vmstat_type != VMSTAT_NONE)
+				collect_vmstat(sb, compact, kc, now,
+					!global.ncfg.no_vmstat_mp, global.ncfg.vmstat_type);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
@@ -552,6 +582,7 @@ main(int argc, char **argv) {
 	char *str = getShortOpts(options);
 	char *exm = NULL, *exs = NULL, *inm = NULL, *ins = NULL;
 
+	system_cpu_max = sysconf(_SC_CPUID_MAX);
 	while (1) {
 		int c, optidx = 0;
 
@@ -563,6 +594,9 @@ main(int argc, char **argv) {
 		switch (c) {
 			case 'L':
 				global.promflags &= ~PROM_SCRAPETIME;
+				break;
+			case 'M':
+				global.ncfg.no_vmstat_mp = false;
 				break;
 			case 'S':
 				global.promflags &= ~PROM_SCRAPETIME_ALL;
@@ -586,6 +620,32 @@ main(int argc, char **argv) {
 				if (global.logfile != NULL)
 					free(global.logfile);
 				global.logfile = strdup(optarg);
+				break;
+			case 'm':
+				if ((strcmp("n", optarg) == 0) || (strcmp("no", optarg) == 0)
+					|| (strcmp("none", optarg) == 0)
+					|| (strcmp("0", optarg) == 0))
+				{
+					global.ncfg.vmstat_type = VMSTAT_NONE;
+				} else if ((strcmp("y", optarg) == 0)
+					|| (strcmp("yes", optarg) == 0)
+					|| (strcmp("normal", optarg) == 0)
+					|| (strcmp("1", optarg) == 0))
+				{
+					global.ncfg.vmstat_type = VMSTAT_NORMAL;
+				} else if ((strcmp("x", optarg) == 0)
+					|| (strcmp("extended", optarg) == 0)
+					|| (strcmp("2", optarg) == 0))
+				{
+					global.ncfg.vmstat_type = VMSTAT_EXTENDED;
+				} else if ((strcmp("a", optarg) == 0)
+					|| (strcmp("all", optarg) == 0)
+					|| (strcmp("3", optarg) == 0))
+				{
+					global.ncfg.vmstat_type = VMSTAT_ALL;
+				} else {
+					fprintf(stderr, "Unsupported vmstat type '%s' ignored.", optarg);
+				}
 				break;
 			case 'n':
 				err += disableMetrics(optarg);
@@ -686,7 +746,12 @@ main(int argc, char **argv) {
 	if (mode == 2)
 		pfd = daemonize();
 
-	start(&(global.ncfg), global.promflags & PROM_COMPACT, &n);
+	err = start(!global.ncfg.no_dmi, !global.ncfg.no_kstats,
+		global.promflags & PROM_COMPACT, &n);
+	if (err & 1)
+		global.ncfg.no_dmi = true;
+	if (err & 2)
+		global.ncfg.no_kstats = true;
 	if (n == 0) {
 		status = SMF_EXIT_TEMP_DISABLE;
 		if (mode == 2) {

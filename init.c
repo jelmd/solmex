@@ -26,31 +26,32 @@ static char *versionHR = NULL;		// version string emitted to stdout/stderr
 #define MMATCH(_x)	(cfg->_x && (regexec(cfg->_x, buf, 0,NULL,0) == 0))
 #define SMATCH(_x)	(cfg->_x && (regexec(cfg->_x, e->prom.name, 0,NULL,0) == 0))
 
-void
-start(node_cfg_t *cfg, bool compact, uint32_t *tasks) {
+uint8_t
+start(bool dmi, bool kstats, bool compact, uint32_t *tasks) {
 	struct stat sbuf;
 	int status;
+	uint8_t res = 0;
 
 	if (started)
-		return;
+		return 0;
 
 	*tasks = 0;
-	if (!cfg->no_dmi) {
+	if (dmi) {
 		if (((status = lstat("/dev/smbios", &sbuf)) != 0)
 			|| (sbuf.st_mode & S_IFLNK) != S_IFLNK)
 		{
 			PROM_WARN("'/dev/smbios' symlink not found. DMI infos n/a.", "");
-			cfg->no_dmi = true;
+			res |= 1;
 		} else {
 			(*tasks)++;
 		}
 	}
-	if (!cfg->no_kstats) {
+	if (kstats) {
 		if (((status = lstat("/dev/kstat", &sbuf)) != 0)
 			|| (sbuf.st_mode & S_IFLNK) != S_IFLNK)
 		{
 			PROM_WARN("'/dev/kstat' symlink not found. Kernel stats n/a.", "");
-			cfg->no_kstats = true;
+			res |= 2;
 		} else {
 			(*tasks)++;
 		}
@@ -60,6 +61,7 @@ start(node_cfg_t *cfg, bool compact, uint32_t *tasks) {
 	PROM_INFO("node task initialized (%d)", *tasks);
 
 	started = 1;
+	return res;
 }
 
 void

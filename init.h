@@ -25,14 +25,15 @@ extern "C" {
 
 /**
  * @brief Initialize the node stack.
- * @param cfg	The configuration to use.
+ * @param dmi	Whether to initialize static DMI derived metrics.
+ * @param kstats	Whether to initialize static kstats derived metrics.
  * @param compact	If \c true, no HELP/TYPE comments get generated and thus
  *	will not be emitted in a client response.
  * @param tasks	Set to the number of tasks which need to be queried on
  *	client requests.
  * @return \c NULL on error, the sensor list otherwise.
  */
-void start(node_cfg_t *cfg, bool compact, uint32_t *tasks);
+uint8_t start(bool dmi, bool kstats, bool compact, uint32_t *tasks);
 
 /**
  * @brief Shutdown the node stack and cleanup any allocated resources (and
