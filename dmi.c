@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <smbios.h>
 #include <ctype.h>
+#include <errno.h>
+#include <strings.h>
 
 #include <libprom/prom.h>
 
@@ -76,13 +78,13 @@ static const char *DMI_ATTR[] = {
 	"chassis_asset_tag",
 };
 
-static char *dmi[DMI_INFO_SZ];		// automagically initialized with NULL
-static bool hasType[4];				// automagically initialized with false
-static uint8_t cpu_count = 0;
-static bool initialized = false;
+static char *dmi[DMI_INFO_SZ];	// the final per package alias socket metrics
+static bool hasType[4];			// BIOS sections seen/analyzed
+static uint16_t cpu_count;	// number of populated packages alias sockets found
+static bool initialized;
 
 typedef struct smbios_cpu {
-	id_t id;				/* id 0 is always the BIOS information */
+	id_t id;				/* BIOS ID 0 is always the BIOS information */
 	// clkspeed is usually 'Unknown' and therefore no help
 	// core*  same thing with - always 0
 	uint32_t maxspeed;		/* maximum speed [MHz] */
@@ -92,7 +94,8 @@ typedef struct smbios_cpu {
 	bool enabled;			/* whether this CPU is enabled */
 } smbios_cpu_t;
 
-static smbios_cpu_t cpu_info[MAX_CPUS];
+static smbios_cpu_t *cpu_info = NULL;
+static size_t cpu_info_sz = 0;
 
 static char *
 strtrimdup(const char *str) {
@@ -101,6 +104,7 @@ strtrimdup(const char *str) {
 
 	if (str == NULL)
 		return NULL;
+
 	len = strlen(str);
 	if (len == 0)
 		return NULL;
@@ -111,6 +115,7 @@ strtrimdup(const char *str) {
 		t--;
 		if (!isspace(t[0]))
 			break;
+
 		t[0] = '\0';
 	}
 	if (s[0] == '\0') {
@@ -156,9 +161,9 @@ recordCpu(smbios_hdl_t *shp, const smbios_struct_t *sp, void *arg) {
 	// returning anything != 0 would stop iteration over smbios chain.
 	if (sp->smbstr_type != SMB_TYPE_PROCESSOR)
 		return 0;
-	if (cpu_count == MAX_CPUS) {
+	if (cpu_count > system_cpu_max) {
 		PROM_WARN("Max. number of supported CPUs reached (%d)). Bios entry %d "
-			"(and all subsequent) ignored.", MAX_CPUS, sp->smbstr_id);
+			"(and all subsequent) ignored.", system_cpu_max, sp->smbstr_id);
 		return 1;	// stop iteration
 	}
 	if (smbios_info_processor(shp, sp->smbstr_id, &info) != 0) {
@@ -168,6 +173,33 @@ recordCpu(smbios_hdl_t *shp, const smbios_struct_t *sp, void *arg) {
 	if (!SMB_PRSTATUS_PRESENT(info.smbp_status))
 		return 0;
 
+	if (cpu_info == NULL) {
+		cpu_info = calloc(8, sizeof(smbios_cpu_t)); // most systems have < 8 packages
+		if (cpu_info == NULL) {
+			PROM_WARN("Memory problem in dmi: %s - cpu %d ignored",
+				strerror(errno), cpu_count);
+			return 2;
+		}
+		cpu_info_sz = 8;
+	} else if (cpu_count == cpu_info_sz) {
+		size_t nl = cpu_info_sz << 1;
+		if ((nl - 1) > system_cpu_max)
+			nl = system_cpu_max + 1;
+		if (cpu_count == nl) {
+			PROM_WARN("CPU limit reached in dmi - cpu %d ignored", cpu_count);
+			return 3;
+		}
+		smbios_cpu_t *p = realloc(cpu_info, nl * sizeof(smbios_cpu_t));
+		if (p == NULL) {
+			PROM_WARN("Memory problem in dmi: %s - cpu %d ignored",
+					  strerror(errno), cpu_count);
+			return 3;
+		} else {
+			cpu_info = p;
+			memset(&(p[cpu_info_sz]), 0, (nl - cpu_info_sz) * sizeof(smbios_cpu_t));
+			cpu_info_sz = nl;
+		}
+	}
 	ci = &cpu_info[cpu_count];
 	cpu_count++;
 
@@ -185,7 +217,7 @@ static void
 copyBiosInfo(smbios_hdl_t *shp) {
 	smbios_bios_t bios;
 	id_t id;
-	char buf[8];
+	char buf[32];
 	int n = 0;
 
 	if ((id = smbios_info_bios(shp, &bios)) != SMB_ERR) {
@@ -221,8 +253,8 @@ copyProductInfo(smbios_hdl_t *shp) {
 	id_t id;
 	int n = 0;
 
-	if ((id = smbios_info_system(shp, &sys)) != SMB_ERR &&
-		smbios_info_common(shp, id, &info) != SMB_ERR)
+	if ((id = smbios_info_system(shp, &sys)) != SMB_ERR
+		&& smbios_info_common(shp, id, &info) != SMB_ERR)
 	{
 		if (info.smbi_manufacturer[0] != '\0') {
 			dmi[SYSTEM_VENDOR] = strtrimdup(info.smbi_manufacturer);
@@ -255,7 +287,6 @@ copyBaseboardInfo(smbios_hdl_t *shp) {
 	int n = 0;
 
 	if (smbios_info_common(shp, 2, &info) == 0) {
-		if (info.smbi_manufacturer)
 		if (info.smbi_manufacturer[0] != '\0') {
 			dmi[BOARD_VENDOR] = strtrimdup(info.smbi_manufacturer);
 			n++;
@@ -276,10 +307,7 @@ copyBaseboardInfo(smbios_hdl_t *shp) {
 	hasType[2] = n != 0;
 
 	// should always return 3, but to make sure
-	if (smbios_info_bboard(shp, 2, &board) == 0) {
-		return board.smbb_chassis;
-	}
-	return 3;
+	return (smbios_info_bboard(shp, 2, &board) == 0) ? board.smbb_chassis : 3;
 }
 
 static void
@@ -288,7 +316,6 @@ copyChassisInfo(smbios_hdl_t *shp, int id) {
 	int n = 0;
 
 	if (smbios_info_common(shp, id, &info) == 0) {
-		if (info.smbi_manufacturer)
 		if (info.smbi_manufacturer[0] != '\0') {
 			dmi[CHASSIS_VENDOR] = strtrimdup(info.smbi_manufacturer);
 			n++;
@@ -303,7 +330,6 @@ copyChassisInfo(smbios_hdl_t *shp, int id) {
 		}
 	}
 	hasType[3] = n != 0;
-
 }
 
 static char *metric;
@@ -314,17 +340,15 @@ buildMetric(psb_t *sb, bool compact) {
 	uint c;
 	int n;
 	size_t sz;
-	char *buf;
 
 	sz = psb_len(sb);
 	if (!compact)
 		addPromInfo(SOLMEXM_DMI);
-	if ((shp = smbios_open(NULL, SMB_VERSION, 0, &n)) == NULL)
-	{
+	if ((shp = smbios_open(NULL, SMB_VERSION, 0, &n)) == NULL) {
 		PROM_WARN("Unable to open /dev/smbios.", "");
 		if (!compact) {
-			 psb_add_str(sb, "# /dev/smbios n/a");
-			 psb_add_char(sb, '\n');
+			psb_add_str(sb, "# /dev/smbios n/a");
+			psb_add_char(sb, '\n');
 		}
 	} else {
 		c = 0;
@@ -359,15 +383,12 @@ buildMetric(psb_t *sb, bool compact) {
 		psb_add_char(sb, '\n');
 		smbios_close(shp);
 	}
-	n = psb_len(sb);
-	buf = psb_dump(sb);
-	metric = strdup(buf + sz);
-	free(buf);
+	metric = strdup(psb_str(sb) + sz);
 	initialized = true;
 }
 
 int64_t
-get_cache_size(uint8_t cpuNum) {
+get_cache_size(uint16_t cpuNum) {
 	if (!initialized) {
 		psb_t *sb = psb_new();
 		// if dmi collector is disabled, it got not called yet
@@ -382,7 +403,7 @@ get_cache_size(uint8_t cpuNum) {
 }
 
 int64_t
-get_turbo_speed(uint8_t cpuNum) {
+get_turbo_speed(uint16_t cpuNum) {
 	if (initialized) {
 		psb_t *sb = psb_new();
 		// if dmi collector is disabled, it got not called yet
