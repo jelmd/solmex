@@ -41,7 +41,7 @@ void collect_dmi(psb_t *sb, bool compact);
  * @param cpuNum	The number of the CPU to lookup. CPUs get enumerated in the
  * 	same order as found via smbios(1M).
  */
-int64_t get_cache_size(uint8_t cpuNum);
+int64_t get_cache_size(uint16_t cpuNum);
 
 /**
  * Get the max speed in Hz of the CPU with the given number. On Solaris this is
@@ -54,7 +54,7 @@ int64_t get_cache_size(uint8_t cpuNum);
  * @param cpuNum	The number of the CPU to lookup. CPUs get enumerated in the
  * 	same order as found via smbios(1M).
  */
-int64_t get_turbo_speed(uint8_t cpuNum);
+int64_t get_turbo_speed(uint16_t cpuNum);
 
 #ifdef __cplusplus
 }
