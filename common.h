@@ -29,30 +29,34 @@ extern "C" {
 #define MAX_CPUS 64
 
 /** The number of CPU strands alias hyperthreads on the system. */
-extern uint8_t system_cpu_count;
+extern uint16_t system_cpu_count;
+/** The max number of CPU strands alias hyperthreads supported on this system  */
+extern uint16_t system_cpu_max;
 
 #define MBUF_SZ 256
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
-
-typedef struct node_cfg {
-	bool no_dmi;
-	bool no_kstats;
-	bool no_load;
-	bool no_cpu_state;
-	bool no_cpu_speed;
-	bool no_cpu_speed_max;
-	bool no_sys_mem;
-	regex_t *exc_metrics;
-	regex_t *exc_sensors;
-	regex_t *inc_metrics;
-	regex_t *inc_sensors;
-} node_cfg_t;
 
 #define addPromInfo(metric) {\
 	psb_add_char(sb, '\n');\
 	psb_add_str(sb, "# HELP " metric ## _N " " metric ## _D );\
 	psb_add_char(sb, '\n');\
 	psb_add_str(sb, "# TYPE " metric ## _N " " metric ## _T);\
+	psb_add_char(sb, '\n');\
+}
+
+#define addPromInfo4(prefix, name, type, desc) {\
+	psb_add_char(sb, '\n');\
+	psb_add_str(sb, "# HELP ");\
+	psb_add_str(sb, prefix);\
+	psb_add_str(sb, name);\
+	psb_add_char(sb, ' ');\
+	psb_add_str(sb, desc);\
+	psb_add_char(sb, '\n');\
+	psb_add_str(sb, "# TYPE ");\
+	psb_add_str(sb, prefix);\
+	psb_add_str(sb, name);\
+	psb_add_char(sb, ' ');\
+	psb_add_str(sb, type);\
 	psb_add_char(sb, '\n');\
 }
 
@@ -176,6 +180,138 @@ typedef struct node_cfg {
 #define SOLMEXM_NFREESZ_D "Total allocated memory freed in bytes."
 #define SOLMEXM_NFREESZ_T "counter"
 #define SOLMEXM_NFREESZ_N "solmex_node_mem_free_sz"
+
+
+#define SOLMEX_VM_NAME_PREFIX "solmex_node_vm_"
+/*
+kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'\
+	'{  ($1 ~ "crtime|snaptime|^$") next; S=P toupper($1) "_"; \
+	print S "D \"\""; print S "T \"counter\"" ; \
+	print S "N " NP $1 "\n"; }'
+*/
+#define SOLMEX_VM_ANONFREE_D "Anonymous page-frees."
+#define SOLMEX_VM_ANONFREE_T "counter"
+#define SOLMEX_VM_ANONFREE_N solmex_node_vm_anonfree
+
+#define SOLMEX_VM_ANONPGIN_D "Anonymous page-ins."
+#define SOLMEX_VM_ANONPGIN_T "counter"
+#define SOLMEX_VM_ANONPGIN_N solmex_node_vm_anonpgin
+
+#define SOLMEX_VM_ANONPGOUT_D "Anonymous page-outs."
+#define SOLMEX_VM_ANONPGOUT_T "counter"
+#define SOLMEX_VM_ANONPGOUT_N solmex_node_vm_anonpgout
+
+#define SOLMEX_VM_AS_FAULT_D "Minor (as) faults"
+#define SOLMEX_VM_AS_FAULT_T "counter"
+#define SOLMEX_VM_AS_FAULT_N solmex_node_vm_as_fault
+
+#define SOLMEX_VM_COW_FAULT_D "Copy-on-write faults"
+#define SOLMEX_VM_COW_FAULT_T "counter"
+#define SOLMEX_VM_COW_FAULT_N solmex_node_vm_cow_fault
+
+#define SOLMEX_VM_DFREE_D "Pages freed by daemon or auto"
+#define SOLMEX_VM_DFREE_T "counter"
+#define SOLMEX_VM_DFREE_N solmex_node_vm_dfree
+
+#define SOLMEX_VM_EXECFREE_D "Executable page-frees."
+#define SOLMEX_VM_EXECFREE_T "counter"
+#define SOLMEX_VM_EXECFREE_N solmex_node_vm_execfree
+
+#define SOLMEX_VM_EXECPGIN_D "Executable page-ins."
+#define SOLMEX_VM_EXECPGIN_T "counter"
+#define SOLMEX_VM_EXECPGIN_N solmex_node_vm_execpgin
+
+#define SOLMEX_VM_EXECPGOUT_D "Executable page-outs."
+#define SOLMEX_VM_EXECPGOUT_T "counter"
+#define SOLMEX_VM_EXECPGOUT_N solmex_node_vm_execpgout
+
+#define SOLMEX_VM_FSFREE_D "File system page-frees."
+#define SOLMEX_VM_FSFREE_T "counter"
+#define SOLMEX_VM_FSFREE_N solmex_node_vm_fsfree
+
+#define SOLMEX_VM_FSPGIN_D "File system page-ins."
+#define SOLMEX_VM_FSPGIN_T "counter"
+#define SOLMEX_VM_FSPGIN_N solmex_node_vm_fspgin
+
+#define SOLMEX_VM_FSPGOUT_D "File system page-outs."
+#define SOLMEX_VM_FSPGOUT_T "counter"
+#define SOLMEX_VM_FSPGOUT_N solmex_node_vm_fspgout
+
+#define SOLMEX_VM_HAT_FAULT_D "Micro (hat) faults"
+#define SOLMEX_VM_HAT_FAULT_T "counter"
+#define SOLMEX_VM_HAT_FAULT_N solmex_node_vm_hat_fault
+
+#define SOLMEX_VM_KERNEL_ASFLT_D "Minor (as) faults in kernel addr space"
+#define SOLMEX_VM_KERNEL_ASFLT_T "counter"
+#define SOLMEX_VM_KERNEL_ASFLT_N solmex_node_vm_kernel_asflt
+
+#define SOLMEX_VM_MAJ_FAULT_D "Major faults"
+#define SOLMEX_VM_MAJ_FAULT_T "counter"
+#define SOLMEX_VM_MAJ_FAULT_N solmex_node_vm_maj_fault
+
+#define SOLMEX_VM_PGFREC_D "Page reclaims from free list"
+#define SOLMEX_VM_PGFREC_T "counter"
+#define SOLMEX_VM_PGFREC_N solmex_node_vm_pgfrec
+
+#define SOLMEX_VM_PGIN_D "page ins"
+#define SOLMEX_VM_PGIN_T "counter"
+#define SOLMEX_VM_PGIN_N solmex_node_vm_pgin
+
+#define SOLMEX_VM_PGOUT_D "page outs"
+#define SOLMEX_VM_PGOUT_T "counter"
+#define SOLMEX_VM_PGOUT_N solmex_node_vm_pgout
+
+#define SOLMEX_VM_PGPGIN_D "Pages paged in"
+#define SOLMEX_VM_PGPGIN_T "counter"
+#define SOLMEX_VM_PGPGIN_N solmex_node_vm_pgpgin
+
+#define SOLMEX_VM_PGPGOUT_D "Pages paged out"
+#define SOLMEX_VM_PGPGOUT_T "counter"
+#define SOLMEX_VM_PGPGOUT_N solmex_node_vm_pgpgout
+
+#define SOLMEX_VM_PGREC_D "Total page reclaims (includes pageout)"
+#define SOLMEX_VM_PGREC_T "counter"
+#define SOLMEX_VM_PGREC_N solmex_node_vm_pgrec
+
+#define SOLMEX_VM_PGRRUN_D "times pager scheduled"
+#define SOLMEX_VM_PGRRUN_T "counter"
+#define SOLMEX_VM_PGRRUN_N solmex_node_vm_pgrrun
+
+#define SOLMEX_VM_PGSWAPIN_D "pages swapped in"
+#define SOLMEX_VM_PGSWAPIN_T "counter"
+#define SOLMEX_VM_PGSWAPIN_N solmex_node_vm_pgswapin
+
+#define SOLMEX_VM_PGSWAPOUT_D "pages swapped out"
+#define SOLMEX_VM_PGSWAPOUT_T "counter"
+#define SOLMEX_VM_PGSWAPOUT_N solmex_node_vm_pgswapout
+
+#define SOLMEX_VM_PROT_FAULT_D "protection faults"
+#define SOLMEX_VM_PROT_FAULT_T "counter"
+#define SOLMEX_VM_PROT_FAULT_N solmex_node_vm_prot_fault
+
+#define SOLMEX_VM_REV_D "revolutions of the page daemon hand"
+#define SOLMEX_VM_REV_T "counter"
+#define SOLMEX_VM_REV_N solmex_node_vm_rev
+
+#define SOLMEX_VM_SCAN_D "pages examined by pageout daemon"
+#define SOLMEX_VM_SCAN_T "counter"
+#define SOLMEX_VM_SCAN_N solmex_node_vm_scan
+
+#define SOLMEX_VM_SOFTLOCK_D "faults due to software locking req"
+#define SOLMEX_VM_SOFTLOCK_T "counter"
+#define SOLMEX_VM_SOFTLOCK_N solmex_node_vm_softlock
+
+#define SOLMEX_VM_SWAPIN_D "swapins"
+#define SOLMEX_VM_SWAPIN_T "counter"
+#define SOLMEX_VM_SWAPIN_N solmex_node_vm_swapin
+
+#define SOLMEX_VM_SWAPOUT_D "swapouts"
+#define SOLMEX_VM_SWAPOUT_T "counter"
+#define SOLMEX_VM_SWAPOUT_N solmex_node_vm_swapout
+
+#define SOLMEX_VM_ZFOD_D "pages zero filled on demand"
+#define SOLMEX_VM_ZFOD_T "counter"
+#define SOLMEX_VM_ZFOD_N solmex_node_vm_zfod
 
 /*
 #define SOLMEXM_XXX_D "short description."
