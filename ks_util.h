@@ -70,9 +70,9 @@ typedef struct ks_info {
 		now, (x)->ks_snaptime, (now - (x)->ksp->ks_snaptime));
 
 #define KS_PRINT_INSTANCE(x) \
-	fprintf(stderr, "KSP %d: %s:%d:%s has %ld bytes in %d entries\n", \
+	fprintf(stderr, "KSP %d: %s:%d:%s has %ld bytes in %d entries (type: %d)\n", \
 		(x)->ks_kid, (x)->ks_module, (x)->ks_instance, (x)->ks_name, \
-		(x)->ks_data_size, (x)->ks_ndata);
+		(x)->ks_data_size, (x)->ks_ndata,(x)->ks_type);
 
 #define KS_PRINT_DATA(x) \
 	fprintf(stderr, "%s has type %d\n", (x)->name, (x)->data_type);
@@ -101,9 +101,12 @@ int update_instance(kstat_ctl_t *kc, ks_info_t *ks);
  * @param now	The current time as delivered by gethrtime(). If the delta to
  * 	the snaptime of the given instance is < 1s, read will be skipped and
  * 	ksp returned as is.
+ * @param data	If provided ksp data are not of type `KSTAT_TYPE_NAMED` or
+ * 	`KSTAT_TYPE_TIMER` the `kstat_data_lookup()` will not work. Use this buffer
+ * 	to get a copy of the raw the data.
  * @return NULL on error, ksp otherwise.
  */
-kstat_t *ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now);
+kstat_t *ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now, void *data);
 
 #ifdef __cplusplus
 }

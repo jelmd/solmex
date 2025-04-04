@@ -82,7 +82,7 @@ collect_cpu_speed(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 		sprintf(buf, "cpu=\"%d\",", i);
 		psb_add_str(sb, buf);
 		found = false;
-		if ((ksp = ks_read(kc, kstat[KS_SPEED].ksp[i], now)) != NULL) {
+		if ((ksp = ks_read(kc, kstat[KS_SPEED].ksp[i], now, NULL)) != NULL) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 			if ((knp = kstat_data_lookup(ksp, "chip_id")) != NULL) {
