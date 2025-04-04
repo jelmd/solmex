@@ -90,6 +90,19 @@ extern uint16_t system_cpu_max;
 #define SOLMEXM_LOAD15_N "solmex_node_load15"
 
 
+#define SOLMEXM_PROCQ_RUN_D "Total number of processes put into the run queue."
+#define SOLMEXM_PROCQ_RUN_T "counter"
+#define SOLMEXM_PROCQ_RUN_N "solmex_node_procq_run"
+
+#define SOLMEXM_PROCQ_WAIT_D "Total number of processes blocked waiting for I/O."
+#define SOLMEXM_PROCQ_WAIT_T "counter"
+#define SOLMEXM_PROCQ_WAIT_N "solmex_node_procq_wait"
+
+#define SOLMEXM_PROCQ_SWAP_D "Total number of processes that have been swapped at some time when being idle."
+#define SOLMEXM_PROCQ_SWAP_T "counter"
+#define SOLMEXM_PROCQ_SWAP_N "solmex_node_procq_swap"
+
+
 #define SOLMEXM_CPUSTATE_D "Total number of CPU strands alias hyperthreads in the system."
 #define SOLMEXM_CPUSTATE_T "gauge"
 #define SOLMEXM_CPUSTATE_N "solmex_node_cpus_total"
@@ -125,7 +138,7 @@ extern uint16_t system_cpu_max;
 
 // The maximum number of pages per second that the system looks at when memory
 // pressure is highest.
-#define SOLMEXM_FASTSCAN_D "Memory in bytes scanned per second when free memory falls below minfree."
+#define SOLMEXM_FASTSCAN_D "Memory in bytes scanned per second when free memory falls below minfree. Min. 64 MiB or physmem/2."
 #define SOLMEXM_FASTSCAN_T "gauge"
 #define SOLMEXM_FASTSCAN_N "solmex_node_mem_fastscan"
 

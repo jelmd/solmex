@@ -11,6 +11,7 @@
 #include <kstat.h>
 #include <sys/loadavg.h>
 #include <rpcsvc/rstat.h>
+#include <sys/sysinfo.h>
 
 #include <libprom/prom.h>
 
@@ -25,8 +26,9 @@
 // usr/src/uts/common/io/kstat.c
 
 typedef enum ks_info_idx {
-	KS_LOADAVERAGE = 0,
-	KS_PSET,
+	KS_IDX_LOADAVERAGE = 0,
+	KS_IDX_PSET,
+	KS_IDX_PROCQ,
 	KS_IDX_MAX,			// last entry by cotract
 } ks_info_idx_t;
 
@@ -35,6 +37,7 @@ typedef enum ks_info_idx {
 static ks_info_t kstat[KS_IDX_MAX] = {
 	{ "unix", 0, "system_misc", -1, 0, NULL },
 	{ "unix", 0, "pset", -1, 0, NULL },
+	{ "unix", 0, "sysinfo", -1, 0, NULL },
 };
 #pragma GCC diagnostic pop
 
@@ -52,17 +55,17 @@ static int
 fetchLoadKstat(kstat_ctl_t *kc, double loadavg[], hrtime_t now) {
 	kstat_t *ksp;
 	kstat_named_t *knp;
-	ks_info_idx_t idx = KS_LOADAVERAGE;
+	ks_info_idx_t idx = KS_IDX_LOADAVERAGE;
 
 	if (now < 0) {
 		now = -now;
-		idx = KS_PSET;
+		idx = KS_IDX_PSET;
 	}
 	uint8_t n = update_instance(kc, &kstat[idx]);
 	if (n != 1)
 		return -1;
 
-	if ((ksp = ks_read(kc, kstat[idx].ksp[0], now)) == NULL)
+	if ((ksp = ks_read(kc, kstat[idx].ksp[0], now, NULL)) == NULL)
 		return -1;
 
 #pragma GCC diagnostic push
@@ -122,6 +125,51 @@ collect_load(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 	PROM_DEBUG("collect_load done", "");
 }
 
+void
+collect_procq(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
+	char buf[32];
+	sysinfo_t si;
+
+	kstat_t *ksp;
+	ks_info_idx_t idx = KS_IDX_PROCQ;
+
+	uint8_t n = update_instance(kc, &kstat[idx]);
+	if (n != 1)
+		return;
+
+	if ((ksp = ks_read(kc, kstat[idx].ksp[0], now, &si)) == NULL)
+		return;
+
+	KS_PRINT_INSTANCE(kstat[idx].ksp[0]);
+	bool free_sb = sb == NULL;
+	if (free_sb)
+		sb = psb_new();
+
+	if (!compact)
+		addPromInfo(SOLMEXM_PROCQ_RUN);
+	psb_add_str(sb, SOLMEXM_PROCQ_RUN_N " ");
+	sprintf(buf, "%d\n", si.runque);
+	psb_add_str(sb, buf);
+
+	if (!compact)
+		addPromInfo(SOLMEXM_PROCQ_SWAP);
+	psb_add_str(sb, SOLMEXM_PROCQ_SWAP_N " ");
+	sprintf(buf, "%d\n", si.swpque);
+	psb_add_str(sb, buf);
+
+	if (!compact)
+		addPromInfo(SOLMEXM_PROCQ_WAIT);
+	psb_add_str(sb, SOLMEXM_PROCQ_WAIT_N " ");
+	sprintf(buf, "%d\n", si.waiting);
+	psb_add_str(sb, buf);
+
+	if (free_sb) {
+		fprintf(stdout, "\n%s", psb_str(sb));
+		psb_destroy(sb);
+	}
+	PROM_DEBUG("collect_procq done", "");
+}
+
 /*
 node_cpus_total{state="offline"} 0
 node_cpus_total{state="online"} 24
@@ -135,12 +183,12 @@ collect_cpu_state(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 
 	PROM_DEBUG("collect_cpu_state ...", "");
 
-	uint8_t n = update_instance(kc, &kstat[KS_PSET]);
+	uint16_t n = update_instance(kc, &kstat[KS_IDX_PSET]);
 	if (n < 1)
 		return;
 
 	for (int i = 0; i < n; i++) {
-		if ((ksp = ks_read(kc, kstat[KS_PSET].ksp[i], now)) == NULL)
+		if ((ksp = ks_read(kc, kstat[KS_IDX_PSET].ksp[i], now, NULL)) == NULL)
 			continue;
 
 #pragma GCC diagnostic push
