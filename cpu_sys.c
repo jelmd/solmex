@@ -149,7 +149,7 @@ collect_cpusys(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 	// get stats for each strand
 	sidx = n * SYS_IDX_MAX;
 	for (i = idx = 0; i < n; i++, idx += SYS_IDX_MAX) {
-		if ((ksp = ks_read(kc, kstat[KS_IDX_CPU_VM].ksp[i], now)) == NULL)
+		if ((ksp = ks_read(kc, kstat[KS_IDX_CPU_VM].ksp[i], now, NULL)) == NULL)
 			continue;
 		seen[i] = ksp->ks_instance + 1;	// instance start with 0 ;-)
 		tmp_type = stype;

@@ -353,7 +353,7 @@ buildInfoMetric(psb_t *sb) {
 		for (; ksp; ksp = ksp->ks_next) {
 			if (strcmp(ksp->ks_module, "cpu_info") != 0)
 				continue;
-			if (ks_read(kc, ksp, 0) == NULL)
+			if (ks_read(kc, ksp, 0, NULL) == NULL)
 				continue;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"

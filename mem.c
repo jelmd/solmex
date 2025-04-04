@@ -44,7 +44,7 @@ collect_sys_mem(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 	if (n != 1)
 		return;
 
-	if ((ksp = ks_read(kc, kstat[KS_IDX_SYSPAGES].ksp[0], now)) == NULL)
+	if ((ksp = ks_read(kc, kstat[KS_IDX_SYSPAGES].ksp[0], now, NULL)) == NULL)
 		return;
 
 	if (page_shift == 0) {

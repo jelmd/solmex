@@ -48,6 +48,17 @@ void collect_load(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
  */
 void collect_cpu_state(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
 
+/**
+ * @brief Get the value of the system's run, swap and wait queue counter.
+ * @param sb	where to add the stats.
+ * @param compact	whether to add HELP and TYPE comments
+ * @param kc	The kstat chain to use. If NULL the values are obtained directly
+ * 		from the kernel via syscall without making the indirection via the kstat
+ *		machinery.
+ * @param now	The current time as delivered by gethrtime().
+ */
+void collect_procq(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
+
 #ifdef __cplusplus
 }
 #endif

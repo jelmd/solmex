@@ -145,7 +145,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 #define MAX_READ_ERRORS 5		// don't wanna block forever
 
 kstat_t *
-ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now) {
+ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now, void *data) {
 	kid_t kid;
 	int count = 0;
 
@@ -153,7 +153,7 @@ ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now) {
 	if (ksp->ks_data && delta > 0 && delta < NANOSEC)
 		return ksp;
 
-	while ((count < MAX_READ_ERRORS) && (kid = kstat_read(kc, ksp, NULL)) == -1) {
+	while ((count < MAX_READ_ERRORS) && (kid = kstat_read(kc, ksp, data)) == -1) {
 		if (errno == EAGAIN) {
 			if (count > 0)
 				(void) poll(NULL, 0, KS_READ_WAIT);

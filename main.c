@@ -73,13 +73,15 @@ static struct option options[] = {
 };
 
 static const char *shortUsage = {
-	"[-LSVcdfh] [-l file] [-n list] [-s ip] [-p port] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex] [-i mregex] [-I sregex]"
+	"[-ILMSVcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
+	"[-m {n|r|x|a}] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex]"
 };
 
 typedef struct node_cfg {
 	bool no_dmi;
 	bool no_kstats;
 	bool no_load;
+	bool no_procq;
 	bool no_cpu_state;
 	bool no_cpu_speed;
 	bool no_cpu_speed_max;
@@ -125,6 +127,7 @@ static struct {
 		.no_dmi = false,
 		.no_kstats = false,
 		.no_load = false,
+		.no_procq = false,
 		.no_cpu_state = false,
 		.no_cpu_speed = false,
 		.no_cpu_speed_max = false,
@@ -172,11 +175,12 @@ disableMetrics(char *skipList) {
 				global.ncfg.no_dmi = true;
 				global.ncfg.no_kstats = true;
 				global.ncfg.no_load = true;
+				global.ncfg.no_procq = true;
 				global.ncfg.no_cpu_state = true;
 				global.ncfg.no_cpu_speed = true;
 				global.ncfg.no_sys_mem = true;
 				global.ncfg.vmstat_type = VMSTAT_NONE;
-				global.ncfg.vmstat_type = CPUSYS_NONE;
+				global.ncfg.cpusys_type = CPUSYS_NONE;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -226,6 +230,8 @@ collect(prom_collector_t *self) {
 			kstat_err_count = 0;
 			if (!global.ncfg.no_load && !global.ncfg.no_cpu_state)
 				collect_load(sb, compact, kc, global.ncfg.no_cpu_state ? now : -now);
+			if (!global.ncfg.no_procq)
+				collect_procq(sb, compact, kc, now);
 			if (!global.ncfg.no_cpu_state)
 				collect_cpu_state(sb, compact, kc, now);
 			if (!global.ncfg.no_cpu_speed)

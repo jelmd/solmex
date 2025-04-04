@@ -78,12 +78,11 @@ typedef enum vm_idx
 } vm_idx_t;
 
 static vm_idx_t nstats[] = {
-	// unix::sysinfo  runque, waiting, swpque,
-	// unix::vminfo  swap_avail, freemem	(swap -s)
+	// unix::vminfo  swap_avail	(swap -s)
 	VM_IDX_SWAPIN,	VM_IDX_SWAPOUT,
 	VM_IDX_PGREC,	VM_IDX_PGFREC,	VM_IDX_HAT_FAULT,	VM_IDX_AS_FAULT,
 	VM_IDX_PGPGIN,	VM_IDX_PGPGOUT,	VM_IDX_DFREE, 		VM_IDX_SCAN,
-	// unix::system_misc  deficit
+	// unix::system_misc  deficit	/* estimate of needs of new swapped in procs */
 };
 static uint32_t nstats_sz = ARRAY_SIZE(nstats);
 
@@ -163,7 +162,7 @@ collect_vmstat(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 	// get stats for each strand
 	sidx = n * VM_IDX_MAX;
 	for (i = idx = 0; i < n; i++, idx += VM_IDX_MAX) {
-		if ((ksp = ks_read(kc, kstat[KS_IDX_CPU_VM].ksp[i], now)) == NULL)
+		if ((ksp = ks_read(kc, kstat[KS_IDX_CPU_VM].ksp[i], now, NULL)) == NULL)
 			continue;
 		seen[i] = ksp->ks_instance + 1;	// instance start with 0 ;-)
 		tmp_type = stype;
