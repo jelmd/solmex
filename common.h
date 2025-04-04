@@ -311,6 +311,106 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_ZFOD_T "counter"
 #define SOLMEX_VM_ZFOD_N solmex_node_vm_zfod
 
+
+// kstat cpu::sys selection
+#define SOLMEX_SYS_NAME_PREFIX "solmex_node_sys_"
+
+#define SOLMEX_SYS_CPU_TICKS_IDLE_D "CPU utilization: idle ticks"
+#define SOLMEX_SYS_CPU_TICKS_IDLE_T "counter"
+#define SOLMEX_SYS_CPU_TICKS_IDLE_N solmex_node_sys_cpu_ticks_idle
+
+#define SOLMEX_SYS_CPU_TICKS_KERNEL_D "CPU utilization: kernel ticks"
+#define SOLMEX_SYS_CPU_TICKS_KERNEL_T "counter"
+#define SOLMEX_SYS_CPU_TICKS_KERNEL_N solmex_node_sys_cpu_ticks_kernel
+
+#define SOLMEX_SYS_CPU_TICKS_USER_D "CPU utilization: user ticks"
+#define SOLMEX_SYS_CPU_TICKS_USER_T "counter"
+#define SOLMEX_SYS_CPU_TICKS_USER_N solmex_node_sys_cpu_ticks_user
+
+#define SOLMEX_SYS_CPU_TICKS_WAIT_D "CPU utilization: waiting ticks"
+#define SOLMEX_SYS_CPU_TICKS_WAIT_T "counter"
+#define SOLMEX_SYS_CPU_TICKS_WAIT_N solmex_node_sys_cpu_ticks_wait
+
+#define SOLMEX_SYS_INTR_D "device interrupts per PIL (PIL_MAX) array"
+#define SOLMEX_SYS_INTR_T "counter"
+#define SOLMEX_SYS_INTR_N solmex_node_sys_intr
+
+#define SOLMEX_SYS_INV_SWTCH_D "involuntary context switches"
+#define SOLMEX_SYS_INV_SWTCH_T "counter"
+#define SOLMEX_SYS_INV_SWTCH_N solmex_node_sys_inv_swtch
+
+#define SOLMEX_SYS_NAMEI_D "pathname lookups"
+#define SOLMEX_SYS_NAMEI_T "counter"
+#define SOLMEX_SYS_NAMEI_N solmex_node_sys_namei
+
+#define SOLMEX_SYS_NTHREADS_D "thread_create()s"
+#define SOLMEX_SYS_NTHREADS_T "counter"
+#define SOLMEX_SYS_NTHREADS_N solmex_node_sys_nthreads
+
+#define SOLMEX_SYS_PHREAD_D "raw I/O reads"
+#define SOLMEX_SYS_PHREAD_T "counter"
+#define SOLMEX_SYS_PHREAD_N solmex_node_sys_phread
+
+#define SOLMEX_SYS_PHWRITE_D "raw I/O writes"
+#define SOLMEX_SYS_PHWRITE_T "counter"
+#define SOLMEX_SYS_PHWRITE_N solmex_node_sys_phwrite
+
+#define SOLMEX_SYS_PSWITCH_D "context switches"
+#define SOLMEX_SYS_PSWITCH_T "counter"
+#define SOLMEX_SYS_PSWITCH_N solmex_node_sys_pswitch
+
+#define SOLMEX_SYS_SYSCALL_D "system calls"
+#define SOLMEX_SYS_SYSCALL_T "counter"
+#define SOLMEX_SYS_SYSCALL_N solmex_node_sys_syscall
+
+#define SOLMEX_SYS_SYSEXEC_D "execs"
+#define SOLMEX_SYS_SYSEXEC_T "counter"
+#define SOLMEX_SYS_SYSEXEC_N solmex_node_sys_sysexec
+
+#define SOLMEX_SYS_SYSFORK_D "forks"
+#define SOLMEX_SYS_SYSFORK_T "counter"
+#define SOLMEX_SYS_SYSFORK_N solmex_node_sys_sysfork
+
+#define SOLMEX_SYS_SYSREAD_D "read() + readv() system calls"
+#define SOLMEX_SYS_SYSREAD_T "counter"
+#define SOLMEX_SYS_SYSREAD_N solmex_node_sys_sysread
+
+#define SOLMEX_SYS_SYSVFORK_D "vforks"
+#define SOLMEX_SYS_SYSVFORK_T "counter"
+#define SOLMEX_SYS_SYSVFORK_N solmex_node_sys_sysvfork
+
+#define SOLMEX_SYS_SYSWRITE_D "write() + writev() system calls"
+#define SOLMEX_SYS_SYSWRITE_T "counter"
+#define SOLMEX_SYS_SYSWRITE_N solmex_node_sys_syswrite
+
+#define SOLMEX_SYS_TRAP_D "traps"
+#define SOLMEX_SYS_TRAP_T "counter"
+#define SOLMEX_SYS_TRAP_N solmex_node_sys_trap
+
+#define SOLMEX_SYS_XCALLS_D "xcalls to other cpus"
+#define SOLMEX_SYS_XCALLS_T "counter"
+#define SOLMEX_SYS_XCALLS_N solmex_node_sys_xcalls
+
+#define SOLMEX_SYS_IRQTHREAD_D "Interrupts as threads (not counting clock interrupt) ('ithr' in mpstat)"
+#define SOLMEX_SYS_IRQTHREAD_T "counter"
+#define SOLMEX_SYS_IRQTHREAD_N solmex_node_sys_intrthread
+
+#define SOLMEX_SYS_MIGRATE_D "Thread migrations (to another processor) ('migr' in mpstat)"
+#define SOLMEX_SYS_MIGRATE_T "counter"
+#define SOLMEX_SYS_MIGRATE_N solmex_node_sys_cpumigrate
+
+#define SOLMEX_SYS_MUTEXIN_D "Spins on mutexes (lock not acquired on first try) ('smtx' in mpstat)"
+#define SOLMEX_SYS_MUTEXIN_T "counter"
+#define SOLMEX_SYS_MUTEXIN_N solmex_node_sys_mutex_adenters
+
+#define SOLMEX_SYS_RDFAILS_D "Spins on readers locks (lock not acquired on first try) (summand 1/2 of 'srw' in mpstat)"
+#define SOLMEX_SYS_RDFAILS_T "counter"
+#define SOLMEX_SYS_RDFAILS_N solmex_node_sys_rw_rdfails
+
+#define SOLMEX_SYS_WRFAILS_D "Spins on writer locks (lock not acquired on first try)  (summand 2/2 of 'srw' in mpstat)"
+#define SOLMEX_SYS_WRFAILS_T "counter"
+#define SOLMEX_SYS_WRFAILS_N solmex_node_sys_rw_wrfails
+
 /*
 #define SOLMEXM_XXX_D "short description."
 #define SOLMEXM_XXX_T "gauge"
