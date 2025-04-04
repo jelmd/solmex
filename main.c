@@ -32,6 +32,7 @@
 #include "cpu_speed.h"
 #include "mem.h"
 #include "vmstat.h"
+#include "cpu_sys.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -47,6 +48,7 @@ typedef enum {
 } SMF_EXIT_CODE;
 
 static struct option options[] = {
+	{"sysinfo-mp",			no_argument,		NULL, 'I'},
 	{"no-scrapetime",		no_argument,		NULL, 'L'},
 	{"vmstats-mp",			no_argument,		NULL, 'M'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
@@ -55,16 +57,18 @@ static struct option options[] = {
 	{"daemon",				no_argument,		NULL, 'd'},
 	{"foreground",			no_argument,		NULL, 'f'},
 	{"help",				no_argument,		NULL, 'h'},
+	{"sysinfo",				required_argument,	NULL, 'i'},
 	{"logfile",				required_argument,	NULL, 'l'},
 	{"no-metrics",			required_argument,	NULL, 'n'},
 	{"vmstats",				required_argument,	NULL, 'm'},
 	{"port",				required_argument,	NULL, 'p'},
 	{"source",				required_argument,	NULL, 's'},
 	{"verbosity",			required_argument,	NULL, 'v'},
+
 	{"exclude-metrics",		required_argument,	NULL, 'x'},
 	{"exclude-sensors",		required_argument,	NULL, 'X'},
-	{"include-metrics",		required_argument,	NULL, 'i'},
-	{"include-sensors",		required_argument,	NULL, 'I'},
+	// {"include-metrics",		required_argument,	NULL, 'i'},
+	// {"include-sensors",		required_argument,	NULL, 'I'},
 	{0, 0, 0, 0}
 };
 
@@ -81,7 +85,9 @@ typedef struct node_cfg {
 	bool no_cpu_speed_max;
 	bool no_sys_mem;
 	vm_stat_quantity_t vmstat_type;
+	cpu_sys_quantity_t cpusys_type;
 	bool no_vmstat_mp;
+	bool no_cpusys_mp;
 	regex_t *exc_metrics;
 	regex_t *exc_sensors;
 	regex_t *inc_metrics;
@@ -124,7 +130,9 @@ static struct {
 		.no_cpu_speed_max = false,
 		.no_sys_mem = false,
 		.vmstat_type = VMSTAT_NORMAL,
+		.cpusys_type = CPUSYS_NORMAL,
 		.no_vmstat_mp = true,
+		.no_cpusys_mp = true,
 		.exc_metrics = NULL,
 		.exc_sensors = NULL,
 		.inc_metrics = NULL,
@@ -168,6 +176,7 @@ disableMetrics(char *skipList) {
 				global.ncfg.no_cpu_speed = true;
 				global.ncfg.no_sys_mem = true;
 				global.ncfg.vmstat_type = VMSTAT_NONE;
+				global.ncfg.vmstat_type = CPUSYS_NONE;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -226,6 +235,9 @@ collect(prom_collector_t *self) {
 			if (global.ncfg.vmstat_type != VMSTAT_NONE)
 				collect_vmstat(sb, compact, kc, now,
 					!global.ncfg.no_vmstat_mp, global.ncfg.vmstat_type);
+			if (global.ncfg.cpusys_type != CPUSYS_NONE)
+				collect_cpusys(sb, compact, kc, now,
+					!global.ncfg.no_cpusys_mp, global.ncfg.cpusys_type);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
@@ -592,6 +604,9 @@ main(int argc, char **argv) {
 		if (c == -1)
 			break;
 		switch (c) {
+			case 'I':
+				global.ncfg.no_cpusys_mp = false;
+				break;
 			case 'L':
 				global.promflags &= ~PROM_SCRAPETIME;
 				break;
@@ -616,6 +631,27 @@ main(int argc, char **argv) {
 			case 'h':
 				fprintf(stderr, "Usage: %s %s\n", argv[0], shortUsage);
 				return 0;
+			case 'i':
+				if ((strcmp("n", optarg) == 0) || (strcmp("no", optarg) == 0)
+					|| (strcmp("none", optarg) == 0)
+					|| (strcmp("0", optarg) == 0))
+				{
+					global.ncfg.cpusys_type = CPUSYS_NONE;
+				} else if ((strcmp("y", optarg) == 0) || (strcmp("r", optarg) == 0)
+					|| (strcmp("yes", optarg) == 0) || (strcmp("regular", optarg) == 0)
+					|| (strcmp("normal", optarg) == 0)
+					|| (strcmp("1", optarg) == 0))
+				{
+					global.ncfg.cpusys_type = CPUSYS_NORMAL;
+				} else if ((strcmp("x", optarg) == 0)
+					|| (strcmp("extended", optarg) == 0)
+					|| (strcmp("2", optarg) == 0))
+				{
+					global.ncfg.cpusys_type = CPUSYS_EXTENDED;
+				} else {
+					fprintf(stderr, "Unsupported vmstat type '%s' ignored.", optarg);
+				}
+				break;
 			case 'l':
 				if (global.logfile != NULL)
 					free(global.logfile);
@@ -627,8 +663,8 @@ main(int argc, char **argv) {
 					|| (strcmp("0", optarg) == 0))
 				{
 					global.ncfg.vmstat_type = VMSTAT_NONE;
-				} else if ((strcmp("y", optarg) == 0)
-					|| (strcmp("yes", optarg) == 0)
+				} else if ((strcmp("y", optarg) == 0) || (strcmp("r", optarg) == 0)
+					|| (strcmp("yes", optarg) == 0) || (strcmp("regular", optarg) == 0)
 					|| (strcmp("normal", optarg) == 0)
 					|| (strcmp("1", optarg) == 0))
 				{
@@ -698,16 +734,6 @@ main(int argc, char **argv) {
 				if (exs)
 					free(exs);
 				exs = strdup(optarg);
-				break;
-			case 'i':
-				if (inm)
-					free(inm);
-				inm = strdup(optarg);
-				break;
-			case 'I':
-				if (ins)
-					free(ins);
-				ins = strdup(optarg);
 				break;
 			case '?':
 				fprintf(stderr, "Usage: %s %s\n", argv[0], shortUsage);
