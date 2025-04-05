@@ -30,6 +30,10 @@ extern "C" {
 extern uint16_t system_cpu_count;
 /** The max. CPU strand alias hyperthread ID supported on this system */
 extern uint16_t system_cpu_max;
+/** The systems default memory pape size */
+extern uint64_t page_sz;
+/** The systems default memory pape size as shift operand */
+extern uint8_t page_shift;
 
 #define MBUF_SZ 256
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
@@ -90,17 +94,34 @@ extern uint16_t system_cpu_max;
 #define SOLMEXM_LOAD15_N "solmex_node_load15"
 
 
-#define SOLMEXM_PROCQ_RUN_D "Total number of processes put into the run queue."
-#define SOLMEXM_PROCQ_RUN_T "counter"
-#define SOLMEXM_PROCQ_RUN_N "solmex_node_procq_run"
+#define SOLMEXM_PROCQ_RUN_D "Average number of processes per second put into the run queue since last query."
+#define SOLMEXM_PROCQ_RUN_T "gauge"
+#define SOLMEXM_PROCQ_RUN_N "solmex_node_procq_run_pps"
 
-#define SOLMEXM_PROCQ_WAIT_D "Total number of processes blocked waiting for I/O."
-#define SOLMEXM_PROCQ_WAIT_T "counter"
-#define SOLMEXM_PROCQ_WAIT_N "solmex_node_procq_wait"
+#define SOLMEXM_PROCQ_WAIT_D "Average number of processes per second blocked waiting for I/O since last query."
+#define SOLMEXM_PROCQ_WAIT_T "gauge"
+#define SOLMEXM_PROCQ_WAIT_N "solmex_node_procq_wait_pps"
 
-#define SOLMEXM_PROCQ_SWAP_D "Total number of processes that have been swapped at some time when being idle."
-#define SOLMEXM_PROCQ_SWAP_T "counter"
-#define SOLMEXM_PROCQ_SWAP_N "solmex_node_procq_swap"
+#define SOLMEXM_PROCQ_SWAP_D "Average number of idle processes per second that have been swapped since last query."
+#define SOLMEXM_PROCQ_SWAP_T "gauge"
+#define SOLMEXM_PROCQ_SWAP_N "solmex_node_procq_swap_pps"
+
+
+#define SOLMEXM_SWAP_ALLOC_D "Allocated swap"
+#define SOLMEXM_SWAP_ALLOC_T "gauge"
+#define SOLMEXM_SWAP_ALLOC_N "solmex_node_swap_allocated_bytes"
+
+#define SOLMEXM_SWAP_AVAIL_D "Unreserved swap (what vmstat shows as 'swap' and 'swap -s' as 'available')"
+#define SOLMEXM_SWAP_AVAIL_T "gauge"
+#define SOLMEXM_SWAP_AVAIL_N "solmex_node_swap_available_bytes"
+
+#define SOLMEXM_SWAP_FREE_D "Unallocated swap"
+#define SOLMEXM_SWAP_FREE_T "gauge"
+#define SOLMEXM_SWAP_FREE_N "solmex_node_swap_free_bytes"
+
+#define SOLMEXM_SWAP_RESV_D "The total amount of swap space not currently allocated, but claimed by memory mappings for possible future use"
+#define SOLMEXM_SWAP_RESV_T "gauge"
+#define SOLMEXM_SWAP_RESV_N "solmex_node_swap_resv_bytes"
 
 
 #define SOLMEXM_CPUSTATE_D "Total number of CPU strands alias hyperthreads in the system."
