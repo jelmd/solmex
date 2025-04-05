@@ -289,6 +289,37 @@ The character special devices used to fetch OS/kernel statistics.
 .B /dev/kmem
 The character special devices used to fetch memory related statistics.
 
+.SH NOTES
+The \fBsolmex_node_procq_\fI*\fR metrics are based on the kernel's
+\fBunix::sysinfo\fR statistics. The related values are Riemann sums, and
+therefore these metrics always represent an average over the time between
+the current and the previous query. This means that if you make a \fBsolmex\fR
+instance publicly available, you may sometimes get an average for the last
+second and other times for the last 10 seconds, depending on your query
+interval and the queries from other clients. If you want to record a consistent
+value, start a separate Solex instance on a different port and ensure that
+only your client can access it (e.g., by using a firewall).
+
+There should be no problem running several instances in parallel as long as
+your system resources (such as CPU and memory) can handle the load. However,
+ensure that each instance is configured to listen on different ports to
+avoid any network conflicts.
+
+Since the kernel updates many metric-related values only once per second,
+there is usually no benefit in selecting a shorter query interval for
+continuous monitoring.
+
+As usual, the best practice is to use a single client that queries the
+intended collector(s) and stores the results in a time series database.
+Other clients, such as grafana, should then query the time series database
+only for their work. For example, we use a single VictoriaMetrics
+\fBvmagent\fR [5] in each global zone to collect, normalize, and send metrics
+to the VictoriaMetrics time series database (\fBvmdb\fR or
+\fBvictoria-metrics-prod\fR [6][7]). In turn several \fBgrafana\fR [2]
+instances are configured to query these databases to visualize data
+in various charts and representations and therefore do not stress any
+collector in the global zones or cause firewall headaches.
+
 .SH "BUGS"
 https://github.com/jelmd/solmex is the official source code repository
 for \fBsolmex\fR.  If you need some new features, or metrics, or bug fixes,
@@ -306,4 +337,10 @@ Jens Elkner
 [3]\ https://www.netdata.cloud/
 .br
 [4]\ https://www.zabbix.com/
+.br
+[5]\ https://docs.victoriametrics.com/vmagent/
+.br
+[6]\ https://docs.victoriametrics.com/single-server-victoriametrics/
+.br
+[7]\ https://docs.victoriametrics.com/cluster-victoriametrics/
 .\" # vim: ts=4 sw=4 filetype=nroff

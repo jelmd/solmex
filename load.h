@@ -25,9 +25,11 @@
 extern "C" {
 #endif
 
+/** NOTE: The kernel updates these values usuallly once per second, only! */
+
 /**
  * @brief Get the average load statistics for the whole system for the last 1, 5,
- * and 15 minutes.
+ * and 15 minutes (via unix::system_misc).
  * @param sb	where to add the stats.
  * @param compact	whether to add HELP and TYPE comments
  * @param kc	The kstat chain to use. If NULL the values are obtained directly
@@ -38,7 +40,7 @@ extern "C" {
 void collect_load(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
 
 /**
- * @brief Get the number of cpus online and offline.
+ * @brief Get the number of cpus online and offline (via unix::pset).
  * @param sb	where to add the stats.
  * @param compact	whether to add HELP and TYPE comments
  * @param kc	The kstat chain to use. If NULL the values are obtained directly
@@ -49,7 +51,8 @@ void collect_load(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
 void collect_cpu_state(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
 
 /**
- * @brief Get the value of the system's run, swap and wait queue counter.
+ * @brief Get the value of the system's run, swap and wait queue counter (via
+ * 	unix::sysinfo)
  * @param sb	where to add the stats.
  * @param compact	whether to add HELP and TYPE comments
  * @param kc	The kstat chain to use. If NULL the values are obtained directly
@@ -58,6 +61,17 @@ void collect_cpu_state(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
  * @param now	The current time as delivered by gethrtime().
  */
 void collect_procq(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
+
+/**
+ * @brief Get swap related kernel stats (via unix::vminfo).
+ * @param sb	where to add the stats.
+ * @param compact	whether to add HELP and TYPE comments
+ * @param kc	The kstat chain to use. If NULL the values are obtained directly
+ * 		from the kernel via syscall without making the indirection via the kstat
+ *		machinery.
+ * @param now	The current time as delivered by gethrtime().
+ */
+void collect_swap(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now);
 
 #ifdef __cplusplus
 }

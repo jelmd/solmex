@@ -48,11 +48,19 @@ typedef enum {
 } SMF_EXIT_CODE;
 
 static struct option options[] = {
+	{"no-loadaverage",		no_argument,		NULL, 'A'},
+	{"no-clock-freq-max",	no_argument,		NULL, 'C'},
+	{"no-dmi",				no_argument,		NULL, 'D'},
+	{"no-dmi",				no_argument,		NULL, 'D'},
 	{"sysinfo-mp",			no_argument,		NULL, 'I'},
+	{"no-kstats",			no_argument,		NULL, 'K'},
 	{"no-scrapetime",		no_argument,		NULL, 'L'},
 	{"vmstats-mp",			no_argument,		NULL, 'M'},
+	{"no-procq",			no_argument,		NULL, 'Q'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
 	{"version",				no_argument,		NULL, 'V'},
+	{"no-swap",				no_argument,		NULL, 'W'},
+	{"no-mem",				no_argument,		NULL, 'Y'},
 	{"compact",				no_argument,		NULL, 'c'},
 	{"daemon",				no_argument,		NULL, 'd'},
 	{"foreground",			no_argument,		NULL, 'f'},
@@ -73,7 +81,7 @@ static struct option options[] = {
 };
 
 static const char *shortUsage = {
-	"[-ILMSVcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
+	"[-ACDFIKLMQSVWYcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
 	"[-m {n|r|x|a}] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex]"
 };
 
@@ -82,6 +90,7 @@ typedef struct node_cfg {
 	bool no_kstats;
 	bool no_load;
 	bool no_procq;
+	bool no_swap;
 	bool no_cpu_state;
 	bool no_cpu_speed;
 	bool no_cpu_speed_max;
@@ -128,6 +137,7 @@ static struct {
 		.no_kstats = false,
 		.no_load = false,
 		.no_procq = false,
+		.no_swap = false,
 		.no_cpu_state = false,
 		.no_cpu_speed = false,
 		.no_cpu_speed_max = false,
@@ -146,6 +156,8 @@ static struct {
 /** The number of CPU strands alias hyperthreads on the system. */
 uint16_t system_cpu_count = 0;
 uint16_t system_cpu_max = 0;
+uint64_t page_sz = 0;
+uint8_t page_shift = 0;
 
 static int
 disableMetrics(char *skipList) {
@@ -218,20 +230,34 @@ collect(prom_collector_t *self) {
 	if (!global.ncfg.no_dmi) {
 		collect_dmi(sb, compact);
 	}
+	hrtime_t now = gethrtime();
 	if (!global.ncfg.no_kstats) {
 		// static stuff
 		collect_boottime(sb, compact);
 		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
 		if (!global.ncfg.no_load && global.ncfg.no_cpu_state)
-			collect_load(sb, compact, NULL, 0);
+			collect_load(sb, compact, NULL, now);
 		if ((kc_new = ks_chain_open_or_update(kc)) != NULL) {
-			hrtime_t now = gethrtime();
+			uint8_t again = sb == NULL;
 			kc = kc_new;
 			kstat_err_count = 0;
 			if (!global.ncfg.no_load && !global.ncfg.no_cpu_state)
 				collect_load(sb, compact, kc, global.ncfg.no_cpu_state ? now : -now);
-			if (!global.ncfg.no_procq)
+			if (!global.ncfg.no_procq) {
 				collect_procq(sb, compact, kc, now);
+				again |= 1 << 1;
+			}
+			// To avoid confusion we do not use the kstat riemann sums
+			if (!global.ncfg.no_swap)
+				collect_swap(sb, compact, NULL, now);
+			if (again & 1) {
+				fprintf(stderr, "\n# CLI: Waiting 1s for kernel sample update ...\n");
+				sleep(1);	// give kernel time to update its records
+				if (again & (1 << 1))
+					collect_procq(sb, compact, kc, now);
+				if (again & (1 << 2))
+					collect_swap(sb, compact, kc, now);
+			}
 			if (!global.ncfg.no_cpu_state)
 				collect_cpu_state(sb, compact, kc, now);
 			if (!global.ncfg.no_cpu_speed)
@@ -255,6 +281,11 @@ collect(prom_collector_t *self) {
 				kc = NULL;
 			}
 		}
+	} else {
+		if (!global.ncfg.no_load)
+			collect_load(sb, compact, NULL, now);
+		if (!global.ncfg.no_swap)
+			collect_swap(sb, compact, NULL, now);
 	}
 	if (sb != NULL && !compact)
 		psb_add_char(sb, '\n');
@@ -610,8 +641,23 @@ main(int argc, char **argv) {
 		if (c == -1)
 			break;
 		switch (c) {
+			case 'A':
+				global.ncfg.no_load = true;
+				break;
+			case 'C':
+				global.ncfg.no_cpu_speed_max = true;
+				break;
+			case 'D':
+				global.ncfg.no_dmi = true;
+				break;
+			case 'F':
+				global.ncfg.no_cpu_speed = true;
+				break;
 			case 'I':
 				global.ncfg.no_cpusys_mp = false;
+				break;
+			case 'K':
+				global.ncfg.no_kstats = true;
 				break;
 			case 'L':
 				global.promflags &= ~PROM_SCRAPETIME;
@@ -619,12 +665,21 @@ main(int argc, char **argv) {
 			case 'M':
 				global.ncfg.no_vmstat_mp = false;
 				break;
+			case 'Q':
+				global.ncfg.no_procq = true;
+				break;
 			case 'S':
 				global.promflags &= ~PROM_SCRAPETIME_ALL;
 				break;
 			case 'V':
 				getVersions(NULL, 1);
 				return 0;
+			case 'W':
+				global.ncfg.no_swap = true;
+				break;
+			case 'Y':
+				global.ncfg.no_sys_mem = true;
+				break;
 			case 'c':
 				global.promflags |= PROM_COMPACT;
 				break;
@@ -773,6 +828,19 @@ main(int argc, char **argv) {
 				global.logfile, strerror(errno));
 			return (errno == EACCES) ? SMF_EXIT_ERR_PERM : SMF_EXIT_ERR_CONFIG;
 		}
+	}
+
+	page_sz = PAGESIZE;
+	if (page_sz == 0) {
+		page_sz = 4096;
+		page_shift = 12;	// assume 4 KiB
+	} else {
+		uint64_t sz = page_sz;
+		while (sz) {
+			page_shift++;
+			sz >>= 1;
+		}
+		page_shift--;
 	}
 
 	if (mode == 2)
