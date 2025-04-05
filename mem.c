@@ -34,8 +34,8 @@ collect_sys_mem(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 	kstat_t *ksp;
 	kstat_named_t *knp;
 	char buf[32];
+
 	bool free_sb = sb == NULL;
-	static uint8_t page_shift = 0;
 	size_t physmem = 0, lockedmem = 0;
 
 	PROM_DEBUG("collect_sys_mem ...", "");
@@ -46,19 +46,6 @@ collect_sys_mem(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 
 	if ((ksp = ks_read(kc, kstat[KS_IDX_SYSPAGES].ksp[0], now, NULL)) == NULL)
 		return;
-
-	if (page_shift == 0) {
-		uint64_t sz = PAGESIZE;
-		if (sz == 0) {
-			page_shift = 12;	// assume 4 KiB
-		} else {
-			while (sz) {
-				page_shift++;
-				sz >>= 1;
-			}
-			page_shift--;
-		}
-	}
 
 	if (free_sb)
 		sb = psb_new();
