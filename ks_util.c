@@ -80,7 +80,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 	kstat_t *ksp;
 
 	kstat_t *tmp_ksp[LOAD_MAX_TMP_ENTRIES];
-	uint8_t found = 0, i, k;
+	uint8_t found = 0, i;//, k;
 
 	// entries uptodate ?
 	if ((kc->kc_chain_id == ks->last_kid))
@@ -99,6 +99,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 	}
 	tmp_ksp[found++] = ksp;
 	if (ks->instance < 0 || ks->name == NULL) {
+		// wildcards - so try to find more
 		for (ksp = ksp->ks_next; ksp; ksp = ksp->ks_next) {
 			if (ks->module != NULL && (strcmp(ks->module, ksp->ks_module) != 0))
 				continue;
@@ -115,9 +116,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 	}
 	// that's why we make all this: we wanna keep already populated instances
 	if (ks->entries < found) {
-		 kstat_t **ksp_new = (ks->ksp == NULL)
-			? calloc(found, sizeof(kstat_t *))
-			: realloc(ks->ksp, found * sizeof(kstat_t *));
+		kstat_t **ksp_new = realloc(ks->ksp, found * sizeof(kstat_t *));
 		if (ksp_new == NULL) {
 			char *s = strerror(errno);
 			PROM_WARN("Unable to alloc ksp array: %s", s);
@@ -126,6 +125,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 		}
 		ks->ksp = ksp_new;
 	}
+	/*
 	for (i = 0; i < found; i++) {
 		kid_t kid_new =  tmp_ksp[i]->ks_kid;
 		for (k = 0; k < ks->entries; k++) {
@@ -133,6 +133,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 				tmp_ksp[i] = ks->ksp[k];
 		}
 	}
+	*/
 	for (i = 0; i < found; i++)
 		ks->ksp[i] = tmp_ksp[i];
 	for (i = found; i < ks->entries; i++)
@@ -160,8 +161,8 @@ ks_read(kstat_ctl_t *kc, kstat_t *ksp, hrtime_t now, void *data) {
 			count++;
 		} else {
 			char *buf = strerror(errno);
-			PROM_WARN("kstat %s:%d:%s read error: %s",
-				ksp->ks_instance, ksp->ks_name, buf)
+			PROM_WARN("kstat 0x%p  %s:%d:%s read error: %s", ksp,
+				ksp->ks_module, ksp->ks_instance, ksp->ks_name, buf)
 			break;
 		}
 	}
