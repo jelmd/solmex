@@ -87,22 +87,21 @@ static sys_idx_t xstats[] = {
 	SYS_IDX_IRQTHREAD,	SYS_IDX_MIGRATE,
 	SYS_IDX_MUTEXIN,	SYS_IDX_RDFAILS,	SYS_IDX_WRFAILS,
 };
-
 static uint32_t xstats_sz = ARRAY_SIZE(xstats);
 
-static uint16_t strand_count_last = 0;
 
 void
 collect_cpusys(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 	bool mp, cpu_sys_quantity_t stype)
 {
+	static uint16_t strand_count_last = 0;
 	static uint64_t *vals = NULL;
 	static int *seen = NULL;
 	sys_idx_t *what;
 
 	kstat_t *ksp;
 	kstat_named_t *knp;
-	char buf[32];
+	char buf[64];
 	int i, k;
 	uint64_t idx, sidx;
 	uint32_t what_sz, l;
@@ -126,21 +125,23 @@ collect_cpusys(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 	if (mp && n == 1)
 		mp = false;
 	if (n > strand_count_last) {
-		if (vals != NULL) {
-			free(vals);
-			free(seen);
-		}
-		vals = calloc(n + 1, sizeof(uint64_t) * SYS_IDX_MAX);
-		seen = calloc(n + 1, sizeof(int));
-		if (vals == NULL) {
+		uint64_t *v = realloc(vals, (n + 1) * sizeof(uint64_t) * SYS_IDX_MAX);
+		int *s = realloc(seen, (n + 1) * sizeof(int));
+		if (v == NULL || s == NULL) {
 			PROM_WARN("Memory problem in cpu_sys: %s", strerror(errno));
+			free(v);
+			free(s);
 			return;
 		}
+		vals = v;
+		seen = s;
+		memset(vals + strand_count_last * SYS_IDX_MAX, 0,
+			(n + 1 - strand_count_last) * sizeof(uint64_t) * SYS_IDX_MAX);
 	} else {
-		memset(&(vals[n]), 0, SYS_IDX_MAX * sizeof(uint64_t)); // reset sum
-		memset(&(seen[0]), 0, n * sizeof(int));	// reset seen
+		memset(vals + n * SYS_IDX_MAX, 0, SYS_IDX_MAX * sizeof(uint64_t)); // reset sum
 	}
 	strand_count_last = n;
+	memset(seen, 0, n * sizeof(int));
 	seen[n] = n;	// last row is alway valid - the sum over all CPUs
 
 	if (free_sb)

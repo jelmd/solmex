@@ -341,6 +341,7 @@ buildInfoMetric(psb_t *sb) {
 	if (kc == NULL) {
 		psb_truncate(sb, sz);
 		return;
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 	} else if ((ksp = kstat_lookup(kc, "cpu_info", -1, NULL)) == NULL) {
