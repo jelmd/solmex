@@ -34,6 +34,8 @@ extern uint16_t system_cpu_max;
 extern uint64_t page_sz;
 /** The systems default memory pape size as shift operand */
 extern uint8_t page_shift;
+/** Number of ticks per second */
+extern uint64_t tps;
 
 #define MBUF_SZ 256
 #define ARRAY_SIZE(array) (sizeof (array) / sizeof (array[0]))
@@ -93,16 +95,29 @@ extern uint8_t page_shift;
 #define SOLMEXM_LOAD15_T "gauge"
 #define SOLMEXM_LOAD15_N "solmex_node_load15"
 
+#define SOLMEXM_DEFICIT_D "Estimate of needs of new swapped in procs ('de' in vmstat)"
+#define SOLMEXM_DEFICIT_T "gauge"
+#define SOLMEXM_DEFICIT_N "solmex_node_load_memdeficit_bytes"
 
-#define SOLMEXM_PROCQ_RUN_D "Average number of processes per second put into the run queue since last query."
+
+#define SOLMEXM_UNIT_TICKS_D "Number of ticks per second"
+#define SOLMEXM_UNIT_TICKS_T "gauge"
+#define SOLMEXM_UNIT_TICKS_N "solmex_node_unit_second_ticks"
+
+#define SOLMEXM_UNIT_PAGE_D "Size of system memory pages"
+#define SOLMEXM_UNIT_PAGE_T "gauge"
+#define SOLMEXM_UNIT_PAGE_N "solmex_node_unit_page_bytes"
+
+
+#define SOLMEXM_PROCQ_RUN_D "Average number of processes per second put into the run queue since last query ('r' in vmstat)"
 #define SOLMEXM_PROCQ_RUN_T "gauge"
 #define SOLMEXM_PROCQ_RUN_N "solmex_node_procq_run_pps"
 
-#define SOLMEXM_PROCQ_WAIT_D "Average number of processes per second blocked waiting for I/O since last query."
+#define SOLMEXM_PROCQ_WAIT_D "Average number of processes per second blocked waiting for I/O since last query ('b' in vmstat)"
 #define SOLMEXM_PROCQ_WAIT_T "gauge"
 #define SOLMEXM_PROCQ_WAIT_N "solmex_node_procq_wait_pps"
 
-#define SOLMEXM_PROCQ_SWAP_D "Average number of idle processes per second that have been swapped since last query."
+#define SOLMEXM_PROCQ_SWAP_D "Average number of idle processes per second that have been swapped since last query ('w' in vmsat)"
 #define SOLMEXM_PROCQ_SWAP_T "gauge"
 #define SOLMEXM_PROCQ_SWAP_N "solmex_node_procq_swap_pps"
 
@@ -111,7 +126,7 @@ extern uint8_t page_shift;
 #define SOLMEXM_SWAP_ALLOC_T "gauge"
 #define SOLMEXM_SWAP_ALLOC_N "solmex_node_swap_allocated_bytes"
 
-#define SOLMEXM_SWAP_AVAIL_D "Unreserved swap (what vmstat shows as 'swap' and 'swap -s' as 'available')"
+#define SOLMEXM_SWAP_AVAIL_D "Unreserved swap ('swap' in vmstat and 'available' in 'swap -s')"
 #define SOLMEXM_SWAP_AVAIL_T "gauge"
 #define SOLMEXM_SWAP_AVAIL_N "solmex_node_swap_available_bytes"
 
@@ -119,7 +134,7 @@ extern uint8_t page_shift;
 #define SOLMEXM_SWAP_FREE_T "gauge"
 #define SOLMEXM_SWAP_FREE_N "solmex_node_swap_free_bytes"
 
-#define SOLMEXM_SWAP_RESV_D "The total amount of swap space not currently allocated, but claimed by memory mappings for possible future use"
+#define SOLMEXM_SWAP_RESV_D "The total amount of swap space not currently allocated, but claimed by memory mappings for possible future use ('used' in 'swap -s')"
 #define SOLMEXM_SWAP_RESV_T "gauge"
 #define SOLMEXM_SWAP_RESV_N "solmex_node_swap_resv_bytes"
 
@@ -128,11 +143,11 @@ extern uint8_t page_shift;
 #define SOLMEXM_CPUSTATE_T "gauge"
 #define SOLMEXM_CPUSTATE_N "solmex_node_cpus_total"
 
-#define SOLMEXM_CPUSPEED_D "Current CPU strand alias thread frequency in hertz."
+#define SOLMEXM_CPUSPEED_D "Current CPU strand alias thread frequency"
 #define SOLMEXM_CPUSPEED_T "gauge"
 #define SOLMEXM_CPUSPEED_N "solmex_node_cpu_frequency_hertz"
 
-#define SOLMEXM_CPUSPEEDMAX_D "Max. CPU strand alias thread frequency in hertz."
+#define SOLMEXM_CPUSPEEDMAX_D "Max. CPU strand alias thread frequency"
 #define SOLMEXM_CPUSPEEDMAX_T "gauge"
 #define SOLMEXM_CPUSPEEDMAX_N "solmex_node_cpu_frequency_max_hertz"
 
@@ -153,13 +168,13 @@ extern uint8_t page_shift;
 #define SOLMEXM_LOTSFREE_T "gauge"
 #define SOLMEXM_LOTSFREE_N "solmex_node_mem_lotsfree"
 
-#define SOLMEXM_NSCAN_D "Memory in bytes scanned during the last second."
+#define SOLMEXM_NSCAN_D "Memory in bytes scanned during the last second"
 #define SOLMEXM_NSCAN_T "gauge"
 #define SOLMEXM_NSCAN_N "solmex_node_mem_nscan"
 
 // The maximum number of pages per second that the system looks at when memory
 // pressure is highest.
-#define SOLMEXM_FASTSCAN_D "Memory in bytes scanned per second when free memory falls below minfree. Min. 64 MiB or physmem/2."
+#define SOLMEXM_FASTSCAN_D "Memory in bytes scanned per second when free memory falls below minfree. Min. 64 MiB or physmem/2"
 #define SOLMEXM_FASTSCAN_T "gauge"
 #define SOLMEXM_FASTSCAN_N "solmex_node_mem_fastscan"
 
@@ -169,49 +184,45 @@ extern uint8_t page_shift;
 
 // The minimum number of pages per second that the system looks at when
 // attempting to reclaim memory.
-#define SOLMEXM_SLOWSCAN_D "Memory in bytes scanned per second when free memory falls below lotsfree. Max. <= fastscan/2."
+#define SOLMEXM_SLOWSCAN_D "Memory in bytes scanned per second when free memory falls below lotsfree. Max. <= fastscan/2"
 #define SOLMEXM_SLOWSCAN_T "gauge"
 #define SOLMEXM_SLOWSCAN_N "solmex_node_mem_slowscan"
 
-#define SOLMEXM_PHYSMEM_D "Total physical RAM of the system in bytes."
+#define SOLMEXM_PHYSMEM_D "Total physical RAM of the system"
 #define SOLMEXM_PHYSMEM_T "gauge"
-#define SOLMEXM_PHYSMEM_N "solmex_node_mem_phys"
+#define SOLMEXM_PHYSMEM_N "solmex_node_mem_phys_bytes"
 
-#define SOLMEXM_AVAILRMEM_D "Available resident (pageable, unreserved) physical memory in bytes."
+#define SOLMEXM_AVAILRMEM_D "Available resident (pageable, unreserved) physical memory"
 #define SOLMEXM_AVAILRMEM_T "gauge"
-#define SOLMEXM_AVAILRMEM_N "solmex_node_mem_availr"
+#define SOLMEXM_AVAILRMEM_N "solmex_node_mem_availr_bytes"
 
-#define SOLMEXM_LOCKEDMEM_D "Physical memory in bytes locked because of user specified locking through mlock or plock. Should be ~ (phys - availr)"
+#define SOLMEXM_LOCKEDMEM_D "Physical memory locked because of user specified locking through mlock or plock. Should be ~ (phys - availr)"
 #define SOLMEXM_LOCKEDMEM_T "gauge"
-#define SOLMEXM_LOCKEDMEM_N "solmex_node_mem_locked"
+#define SOLMEXM_LOCKEDMEM_N "solmex_node_mem_locked_bytes"
 
-#define SOLMEXM_FREEMEM_D "Currently re-usable memory in bytes. It includes memory paged out and used for cache, but page scanner prefers unused pages."
+#define SOLMEXM_FREEMEM_D "Currently re-usable memory. It includes memory paged out and used for cache, but page scanner prefers unused pages ('free' in vmstat)"
 #define SOLMEXM_FREEMEM_T "gauge"
-#define SOLMEXM_FREEMEM_N "solmex_node_mem_free"
+#define SOLMEXM_FREEMEM_N "solmex_node_mem_free_bytes"
 
-#define SOLMEXM_PPKERNEL_D "Total physical memory in bytes used by the kernel since the startup."
+#define SOLMEXM_PPKERNEL_D "Total physical memory used by the kernel since the startup"
 #define SOLMEXM_PPKERNEL_T "gauge"
-#define SOLMEXM_PPKERNEL_N "solmex_node_mem_kernel"
+#define SOLMEXM_PPKERNEL_N "solmex_node_mem_kernel_bytes"
 
-#define SOLMEXM_PAGESZ_D "Size in bytes of system memory pages."
-#define SOLMEXM_PAGESZ_T "gauge"
-#define SOLMEXM_PAGESZ_N "solmex_node_mem_pagesz"
-
-#define SOLMEXM_NALLOC_D "Total number of memory allocation calls. Includes failed requests, too."
+#define SOLMEXM_NALLOC_D "Total number of memory allocations. Includes failed requests, too"
 #define SOLMEXM_NALLOC_T "counter"
 #define SOLMEXM_NALLOC_N "solmex_node_mem_nalloc_calls"
 
-#define SOLMEXM_NALLOCSZ_D "Total memory in bytes requested by allocation calls. Includes size of failed requests, too."
+#define SOLMEXM_NALLOCSZ_D "Total memory requested by allocation calls. Includes size of failed requests, too"
 #define SOLMEXM_NALLOCSZ_T "counter"
-#define SOLMEXM_NALLOCSZ_N "solmex_node_mem_nalloc_sz"
+#define SOLMEXM_NALLOCSZ_N "solmex_node_mem_nalloc_bytes"
 
-#define SOLMEXM_NFREE_D "Total number of call to free allocated memory."
+#define SOLMEXM_NFREE_D "Total calls to free allocated memory"
 #define SOLMEXM_NFREE_T "counter"
 #define SOLMEXM_NFREE_N "solmex_node_mem_free_calls"
 
-#define SOLMEXM_NFREESZ_D "Total allocated memory freed in bytes."
+#define SOLMEXM_NFREESZ_D "Total allocated memory freed"
 #define SOLMEXM_NFREESZ_T "counter"
-#define SOLMEXM_NFREESZ_N "solmex_node_mem_free_sz"
+#define SOLMEXM_NFREESZ_N "solmex_node_mem_free_bytes"
 
 
 #define SOLMEX_VM_NAME_PREFIX "solmex_node_vm_"
@@ -221,19 +232,19 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 	print S "D \"\""; print S "T \"counter\"" ; \
 	print S "N " NP $1 "\n"; }'
 */
-#define SOLMEX_VM_ANONFREE_D "Anonymous page-frees."
+#define SOLMEX_VM_ANONFREE_D "Anonymous page-frees ('apf' in 'vmstat -p')"
 #define SOLMEX_VM_ANONFREE_T "counter"
 #define SOLMEX_VM_ANONFREE_N solmex_node_vm_anonfree
 
-#define SOLMEX_VM_ANONPGIN_D "Anonymous page-ins."
+#define SOLMEX_VM_ANONPGIN_D "Anonymous page-ins ('api' in 'vmstat -p')"
 #define SOLMEX_VM_ANONPGIN_T "counter"
 #define SOLMEX_VM_ANONPGIN_N solmex_node_vm_anonpgin
 
-#define SOLMEX_VM_ANONPGOUT_D "Anonymous page-outs."
+#define SOLMEX_VM_ANONPGOUT_D "Anonymous page-outs ('apo' in 'vmstat -p')"
 #define SOLMEX_VM_ANONPGOUT_T "counter"
 #define SOLMEX_VM_ANONPGOUT_N solmex_node_vm_anonpgout
 
-#define SOLMEX_VM_AS_FAULT_D "Minor (as) faults"
+#define SOLMEX_VM_AS_FAULT_D "Minor (as) faults (summand 2/2 of 'mf' in vmstat and 'minf' in mpstat)"
 #define SOLMEX_VM_AS_FAULT_T "counter"
 #define SOLMEX_VM_AS_FAULT_N solmex_node_vm_as_fault
 
@@ -241,35 +252,35 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_COW_FAULT_T "counter"
 #define SOLMEX_VM_COW_FAULT_N solmex_node_vm_cow_fault
 
-#define SOLMEX_VM_DFREE_D "Pages freed by daemon or auto"
+#define SOLMEX_VM_DFREE_D "Pages freed by daemon or auto ('fr' in vmstat)"
 #define SOLMEX_VM_DFREE_T "counter"
 #define SOLMEX_VM_DFREE_N solmex_node_vm_dfree
 
-#define SOLMEX_VM_EXECFREE_D "Executable page-frees."
+#define SOLMEX_VM_EXECFREE_D "Executable page-frees ('epf' in 'vmstat -p')"
 #define SOLMEX_VM_EXECFREE_T "counter"
 #define SOLMEX_VM_EXECFREE_N solmex_node_vm_execfree
 
-#define SOLMEX_VM_EXECPGIN_D "Executable page-ins."
+#define SOLMEX_VM_EXECPGIN_D "Executable page-ins ('epi' in 'vmstat -p')"
 #define SOLMEX_VM_EXECPGIN_T "counter"
 #define SOLMEX_VM_EXECPGIN_N solmex_node_vm_execpgin
 
-#define SOLMEX_VM_EXECPGOUT_D "Executable page-outs."
+#define SOLMEX_VM_EXECPGOUT_D "Executable page-outs ('epo' in 'vmstat -p')"
 #define SOLMEX_VM_EXECPGOUT_T "counter"
 #define SOLMEX_VM_EXECPGOUT_N solmex_node_vm_execpgout
 
-#define SOLMEX_VM_FSFREE_D "File system page-frees."
+#define SOLMEX_VM_FSFREE_D "File system page-frees ('fpf' in 'vmstat -p')"
 #define SOLMEX_VM_FSFREE_T "counter"
 #define SOLMEX_VM_FSFREE_N solmex_node_vm_fsfree
 
-#define SOLMEX_VM_FSPGIN_D "File system page-ins."
+#define SOLMEX_VM_FSPGIN_D "File system page-ins ('fpi' in 'vmstat -p')"
 #define SOLMEX_VM_FSPGIN_T "counter"
 #define SOLMEX_VM_FSPGIN_N solmex_node_vm_fspgin
 
-#define SOLMEX_VM_FSPGOUT_D "File system page-outs."
+#define SOLMEX_VM_FSPGOUT_D "File system page-outs ('fpo' in 'vmstat -p')"
 #define SOLMEX_VM_FSPGOUT_T "counter"
 #define SOLMEX_VM_FSPGOUT_N solmex_node_vm_fspgout
 
-#define SOLMEX_VM_HAT_FAULT_D "Micro (hat) faults"
+#define SOLMEX_VM_HAT_FAULT_D "Micro (hat) faults (summand 1/2 of 'mf' in vmstat and 'minf' in mpstat)"
 #define SOLMEX_VM_HAT_FAULT_T "counter"
 #define SOLMEX_VM_HAT_FAULT_N solmex_node_vm_hat_fault
 
@@ -277,7 +288,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_KERNEL_ASFLT_T "counter"
 #define SOLMEX_VM_KERNEL_ASFLT_N solmex_node_vm_kernel_asflt
 
-#define SOLMEX_VM_MAJ_FAULT_D "Major faults"
+#define SOLMEX_VM_MAJ_FAULT_D "Major faults ('mjf' in mpstat)"
 #define SOLMEX_VM_MAJ_FAULT_T "counter"
 #define SOLMEX_VM_MAJ_FAULT_N solmex_node_vm_maj_fault
 
@@ -285,11 +296,11 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_PGFREC_T "counter"
 #define SOLMEX_VM_PGFREC_N solmex_node_vm_pgfrec
 
-#define SOLMEX_VM_PGIN_D "page ins"
+#define SOLMEX_VM_PGIN_D "page ins ('pi' in vmstat)"
 #define SOLMEX_VM_PGIN_T "counter"
 #define SOLMEX_VM_PGIN_N solmex_node_vm_pgin
 
-#define SOLMEX_VM_PGOUT_D "page outs"
+#define SOLMEX_VM_PGOUT_D "page outs ('po' in vmstat)"
 #define SOLMEX_VM_PGOUT_T "counter"
 #define SOLMEX_VM_PGOUT_N solmex_node_vm_pgout
 
@@ -301,7 +312,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_PGPGOUT_T "counter"
 #define SOLMEX_VM_PGPGOUT_N solmex_node_vm_pgpgout
 
-#define SOLMEX_VM_PGREC_D "Total page reclaims (includes pageout)"
+#define SOLMEX_VM_PGREC_D "Total page reclaims including pageouts ('re' in vmstat)"
 #define SOLMEX_VM_PGREC_T "counter"
 #define SOLMEX_VM_PGREC_N solmex_node_vm_pgrec
 
@@ -325,7 +336,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_REV_T "counter"
 #define SOLMEX_VM_REV_N solmex_node_vm_rev
 
-#define SOLMEX_VM_SCAN_D "pages examined by pageout daemon"
+#define SOLMEX_VM_SCAN_D "pages examined by pageout daemon ('sr' in vmstat)"
 #define SOLMEX_VM_SCAN_T "counter"
 #define SOLMEX_VM_SCAN_N solmex_node_vm_scan
 
@@ -333,11 +344,11 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_VM_SOFTLOCK_T "counter"
 #define SOLMEX_VM_SOFTLOCK_N solmex_node_vm_softlock
 
-#define SOLMEX_VM_SWAPIN_D "swapins"
+#define SOLMEX_VM_SWAPIN_D "swapins ('si' in 'vmstat -S')"
 #define SOLMEX_VM_SWAPIN_T "counter"
 #define SOLMEX_VM_SWAPIN_N solmex_node_vm_swapin
 
-#define SOLMEX_VM_SWAPOUT_D "swapouts"
+#define SOLMEX_VM_SWAPOUT_D "swapouts ('so' in 'vmstat -S')"
 #define SOLMEX_VM_SWAPOUT_T "counter"
 #define SOLMEX_VM_SWAPOUT_N solmex_node_vm_swapout
 
@@ -349,27 +360,27 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 // kstat cpu::sys selection
 #define SOLMEX_SYS_NAME_PREFIX "solmex_node_sys_"
 
-#define SOLMEX_SYS_CPU_TICKS_IDLE_D "CPU utilization: idle ticks"
+#define SOLMEX_SYS_CPU_TICKS_IDLE_D "idle ticks ('id' in vmstat, 'idl' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_IDLE_T "counter"
 #define SOLMEX_SYS_CPU_TICKS_IDLE_N solmex_node_sys_cpu_ticks_idle
 
-#define SOLMEX_SYS_CPU_TICKS_KERNEL_D "CPU utilization: kernel ticks"
+#define SOLMEX_SYS_CPU_TICKS_KERNEL_D "kernel ticks ('cpu sy' in vmstat, 'sys' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_KERNEL_T "counter"
 #define SOLMEX_SYS_CPU_TICKS_KERNEL_N solmex_node_sys_cpu_ticks_kernel
 
-#define SOLMEX_SYS_CPU_TICKS_USER_D "CPU utilization: user ticks"
+#define SOLMEX_SYS_CPU_TICKS_USER_D "user ticks ('us' in vmstat, 'usr' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_USER_T "counter"
 #define SOLMEX_SYS_CPU_TICKS_USER_N solmex_node_sys_cpu_ticks_user
 
-#define SOLMEX_SYS_CPU_TICKS_WAIT_D "CPU utilization: waiting ticks"
+#define SOLMEX_SYS_CPU_TICKS_WAIT_D "waiting ticks ('st' in mpstat)"
 #define SOLMEX_SYS_CPU_TICKS_WAIT_T "counter"
 #define SOLMEX_SYS_CPU_TICKS_WAIT_N solmex_node_sys_cpu_ticks_wait
 
-#define SOLMEX_SYS_INTR_D "device interrupts per PIL (PIL_MAX) array"
+#define SOLMEX_SYS_INTR_D "device interrupts per PIL (PIL_MAX) array ('in' in vmstat, 'intr' in mpstat)"
 #define SOLMEX_SYS_INTR_T "counter"
 #define SOLMEX_SYS_INTR_N solmex_node_sys_intr
 
-#define SOLMEX_SYS_INV_SWTCH_D "involuntary context switches"
+#define SOLMEX_SYS_INV_SWTCH_D "involuntary context switches ('icsw' in mpstat)"
 #define SOLMEX_SYS_INV_SWTCH_T "counter"
 #define SOLMEX_SYS_INV_SWTCH_N solmex_node_sys_inv_swtch
 
@@ -389,11 +400,11 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_SYS_PHWRITE_T "counter"
 #define SOLMEX_SYS_PHWRITE_N solmex_node_sys_phwrite
 
-#define SOLMEX_SYS_PSWITCH_D "context switches"
+#define SOLMEX_SYS_PSWITCH_D "context switches ('cs' in vmstat, 'csw' in mpstat)"
 #define SOLMEX_SYS_PSWITCH_T "counter"
 #define SOLMEX_SYS_PSWITCH_N solmex_node_sys_pswitch
 
-#define SOLMEX_SYS_SYSCALL_D "system calls"
+#define SOLMEX_SYS_SYSCALL_D "system calls ('faults sy' in vmstat, 'syscl' in mpstat)"
 #define SOLMEX_SYS_SYSCALL_T "counter"
 #define SOLMEX_SYS_SYSCALL_N solmex_node_sys_syscall
 
@@ -421,7 +432,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_SYS_TRAP_T "counter"
 #define SOLMEX_SYS_TRAP_N solmex_node_sys_trap
 
-#define SOLMEX_SYS_XCALLS_D "xcalls to other cpus"
+#define SOLMEX_SYS_XCALLS_D "cross-calls to other cpus ('xcal' in mpstat)"
 #define SOLMEX_SYS_XCALLS_T "counter"
 #define SOLMEX_SYS_XCALLS_N solmex_node_sys_xcalls
 

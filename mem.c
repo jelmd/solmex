@@ -167,9 +167,6 @@ collect_sys_mem(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now) {
 		psb_add_str(sb, buf);
 	}
 #pragma GCC diagnostic pop
-	psb_add_str(sb, SOLMEXM_PAGESZ_N " ");
-	sprintf(buf, "%ld\n", 1L << page_shift);
-	psb_add_str(sb, buf);
 
 	if (free_sb) {
 		fprintf(stdout, "\n%s", psb_str(sb));

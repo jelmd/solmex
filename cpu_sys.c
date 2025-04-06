@@ -87,22 +87,21 @@ static sys_idx_t xstats[] = {
 	SYS_IDX_IRQTHREAD,	SYS_IDX_MIGRATE,
 	SYS_IDX_MUTEXIN,	SYS_IDX_RDFAILS,	SYS_IDX_WRFAILS,
 };
-
 static uint32_t xstats_sz = ARRAY_SIZE(xstats);
 
-static uint16_t strand_count_last = 0;
 
 void
 collect_cpusys(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 	bool mp, cpu_sys_quantity_t stype)
 {
+	static uint16_t strand_count_last = 0;
 	static uint64_t *vals = NULL;
 	static int *seen = NULL;
 	sys_idx_t *what;
 
 	kstat_t *ksp;
 	kstat_named_t *knp;
-	char buf[32];
+	char buf[64];
 	int i, k;
 	uint64_t idx, sidx;
 	uint32_t what_sz, l;
@@ -132,8 +131,9 @@ collect_cpusys(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now,
 		}
 		vals = calloc(n + 1, sizeof(uint64_t) * SYS_IDX_MAX);
 		seen = calloc(n + 1, sizeof(int));
-		if (vals == NULL) {
+		if (vals == NULL || seen == NULL) {
 			PROM_WARN("Memory problem in cpu_sys: %s", strerror(errno));
+			strand_count_last = 0;
 			return;
 		}
 	} else {

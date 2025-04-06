@@ -51,13 +51,15 @@ static struct option options[] = {
 	{"no-loadaverage",		no_argument,		NULL, 'A'},
 	{"no-clock-freq-max",	no_argument,		NULL, 'C'},
 	{"no-dmi",				no_argument,		NULL, 'D'},
-	{"no-dmi",				no_argument,		NULL, 'D'},
+	{"no-clock-freq",		no_argument,		NULL, 'F'},
 	{"sysinfo-mp",			no_argument,		NULL, 'I'},
 	{"no-kstats",			no_argument,		NULL, 'K'},
 	{"no-scrapetime",		no_argument,		NULL, 'L'},
 	{"vmstats-mp",			no_argument,		NULL, 'M'},
+	{"no-cpu-state",		no_argument,		NULL, 'O'},
 	{"no-procq",			no_argument,		NULL, 'Q'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
+	{"no-units",			no_argument,		NULL, 'U'},
 	{"version",				no_argument,		NULL, 'V'},
 	{"no-swap",				no_argument,		NULL, 'W'},
 	{"no-mem",				no_argument,		NULL, 'Y'},
@@ -81,7 +83,7 @@ static struct option options[] = {
 };
 
 static const char *shortUsage = {
-	"[-ACDFIKLMQSVWYcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
+	"[-ACDFIKLMQSUVWYcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
 	"[-m {n|r|x|a}] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex]"
 };
 
@@ -89,6 +91,7 @@ typedef struct node_cfg {
 	bool no_dmi;
 	bool no_kstats;
 	bool no_load;
+	bool no_units;
 	bool no_procq;
 	bool no_swap;
 	bool no_cpu_state;
@@ -136,6 +139,7 @@ static struct {
 		.no_dmi = false,
 		.no_kstats = false,
 		.no_load = false,
+		.no_units = false,
 		.no_procq = false,
 		.no_swap = false,
 		.no_cpu_state = false,
@@ -158,6 +162,7 @@ uint16_t system_cpu_count = 0;
 uint16_t system_cpu_max = 0;
 uint64_t page_sz = 0;
 uint8_t page_shift = 0;
+uint64_t tps = 0;
 
 static int
 disableMetrics(char *skipList) {
@@ -187,8 +192,8 @@ disableMetrics(char *skipList) {
 				global.ncfg.no_dmi = true;
 				global.ncfg.no_kstats = true;
 				global.ncfg.no_load = true;
+				global.ncfg.no_units = true;
 				global.ncfg.no_procq = true;
-				global.ncfg.no_cpu_state = true;
 				global.ncfg.no_cpu_speed = true;
 				global.ncfg.no_sys_mem = true;
 				global.ncfg.vmstat_type = VMSTAT_NONE;
@@ -223,26 +228,27 @@ static prom_map_t *
 collect(prom_collector_t *self) {
 	bool compact = global.promflags & PROM_COMPACT;
 	kstat_ctl_t *kc_new;
+	hrtime_t now = gethrtime();
 
 	PROM_DEBUG("collector: %p  sb: %p", self, sb);
 	if (global.versionInfo)
 		getVersions(sb, compact);
-	if (!global.ncfg.no_dmi) {
+	if (!global.ncfg.no_dmi)
 		collect_dmi(sb, compact);
-	}
-	hrtime_t now = gethrtime();
+	if (!global.ncfg.no_units)
+		collect_units(sb, compact);
+	if (!global.ncfg.no_cpu_state)
+		collect_cpu_state(sb, compact, now);
 	if (!global.ncfg.no_kstats) {
 		// static stuff
 		collect_boottime(sb, compact);
 		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
-		if (!global.ncfg.no_load && global.ncfg.no_cpu_state)
-			collect_load(sb, compact, NULL, now);
 		if ((kc_new = ks_chain_open_or_update(kc)) != NULL) {
 			uint8_t again = sb == NULL;
 			kc = kc_new;
 			kstat_err_count = 0;
-			if (!global.ncfg.no_load && !global.ncfg.no_cpu_state)
-				collect_load(sb, compact, kc, global.ncfg.no_cpu_state ? now : -now);
+			if (!global.ncfg.no_load)
+				collect_load(sb, compact, kc, now);
 			if (!global.ncfg.no_procq) {
 				collect_procq(sb, compact, kc, now);
 				again |= 1 << 1;
@@ -258,8 +264,6 @@ collect(prom_collector_t *self) {
 				if (again & (1 << 2))
 					collect_swap(sb, compact, kc, now);
 			}
-			if (!global.ncfg.no_cpu_state)
-				collect_cpu_state(sb, compact, kc, now);
 			if (!global.ncfg.no_cpu_speed)
 				collect_cpu_speed(sb, compact, kc, now, !global.ncfg.no_cpu_speed_max);
 			if (!global.ncfg.no_sys_mem)
@@ -665,11 +669,17 @@ main(int argc, char **argv) {
 			case 'M':
 				global.ncfg.no_vmstat_mp = false;
 				break;
+			case 'O':
+				global.ncfg.no_cpu_state = true;
+				break;
 			case 'Q':
 				global.ncfg.no_procq = true;
 				break;
 			case 'S':
 				global.promflags &= ~PROM_SCRAPETIME_ALL;
+				break;
+			case 'U':
+				global.ncfg.no_units = true;
 				break;
 			case 'V':
 				getVersions(NULL, 1);
@@ -830,6 +840,8 @@ main(int argc, char **argv) {
 		}
 	}
 
+	tps = sysconf(_SC_CLK_TCK);
+	system_cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 	page_sz = PAGESIZE;
 	if (page_sz == 0) {
 		page_sz = 4096;
