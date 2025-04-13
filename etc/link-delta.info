@@ -1,0 +1,68 @@
+difference between kstat for (a) ${linkname}::link and (b) link::${linkname}
+============================================================================
+	bcstrcvbytes                    6838069583
+	bcstxmtbytes                    176857590
+	blockcnt                        0
+	brdcstrcv                       113506793
+	brdcstxmt                       2639613
+	-collisions
+	+dhcpdropped                     0
+	+dhcpspoofed                     0
+	+idropbytes                      0
+	+idrops                          0
+	-dl_idrops
+	+intrbytes                       1208964558
+	-ierrors
+	-ifspeed
+	+intrs                           3215961
+	ipackets                        116893444
+	+ipspoofed                       0
+	-link_duplex
+	-link_state
+	+lrobadipcsums                   0
+	+lrobadtcpcsums                  0
+	+lrooutseqpkts                   0
+	+lrotruncpkts                    0
+	+macspoofed                      0
+	multircv                        0
+	multircvbytes                   0
+	multixmt                        0
+	multixmtbytes                   0
+	obytes                          539020355
+	+odropbytes                      7168
+	+odrops                          108
+	-dl_odrops
+	oerrors                         0
+	opackets                        5936726
+	-phys_state
+	+pollbytes                       248064310
+	+polls                           170624
+	rbytes                          8295123381
+	+restricted                      0
+	+rxlocal                         66
+	+rxlocalbytes                    24930
+	+txerrors                        0
+	+txlocal                         63
+	+txlocalbytes                    11756
+	+unblockcnt                      0
+
++ .. not in (b)
+- .. not in (a)
+
+So (a) contains in addition the quantity in bytes - we definitely want this.
+
+dl_idrops and dl_odrops from (b) seem not to correlate to idrop[byte]s 
+and odrop[byte]s from (a), however, dl_*drops are nowhere documented and at
+least 11.4 mentions *drop[byte]s for 'dlstat show-phys' as " input and output
+packet drops per physical datalink", but do not match dl_*drops stats. I guess,
+they might be gathered in the IP layer or the [vnic] layer if any between them.
+
+ierrors is missing in (a) - perhaps an 11.3 bug? Or not visible at the layer
+where the stats are collected? It contains oerrors ...
+
+The in (a) missing link_duplex, {link,phys}_state and ifspeed are bearable,
+however, ifspeed is usually a static value, and thus can be gathered in the
+nic collection phase (which perhaps gets triggered anyway, if a link comes
+up/goes down?).
+
+

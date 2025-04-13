@@ -1,0 +1,32 @@
+module: link                            instance: 0     
+name:   net0                         class:    net
+        brdcstrcv                       1154406
+        brdcstxmt                       35918
+        collisions                      0
+        crtime                          168.708507756
+        ierrors                         0
+        ifspeed                         1000000000
+        ipackets                        1704923
+        ipackets64                      1704923
+        link_duplex                     0
+        link_state                      1
+        multircv                        529073
+        multixmt                        35918
+        norcvbuf                        0
+        noxmtbuf                        0
+        obytes                          4600598
+        obytes64                        4600598
+        oerrors                         0
+        opackets                        55726
+        opackets64                      55726
+        rbytes                          351140538
+        rbytes64                        351140538
+        snaptime                        3419360.557915208
+        unknowns                        3741
+        zonename                        ffffffff-1234-5678-90ab-cdef01234567
+
+module: link                            instance: 0     
+name:   net0                            class:    net
+        link_duplex                     2
+        link_state                      1
+

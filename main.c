@@ -33,6 +33,7 @@
 #include "mem.h"
 #include "vmstat.h"
 #include "cpu_sys.h"
+#include "network.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -59,6 +60,7 @@ static struct option options[] = {
 	{"no-cpu-state",		no_argument,		NULL, 'O'},
 	{"no-procq",			no_argument,		NULL, 'Q'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
+	{"nic-filter",			required_argument,	NULL, 'T'},
 	{"no-units",			no_argument,		NULL, 'U'},
 	{"version",				no_argument,		NULL, 'V'},
 	{"no-swap",				no_argument,		NULL, 'W'},
@@ -73,18 +75,15 @@ static struct option options[] = {
 	{"vmstats",				required_argument,	NULL, 'm'},
 	{"port",				required_argument,	NULL, 'p'},
 	{"source",				required_argument,	NULL, 's'},
+	{"nicstats",			required_argument,	NULL, 't'},
 	{"verbosity",			required_argument,	NULL, 'v'},
-
-	{"exclude-metrics",		required_argument,	NULL, 'x'},
-	{"exclude-sensors",		required_argument,	NULL, 'X'},
-	// {"include-metrics",		required_argument,	NULL, 'i'},
-	// {"include-sensors",		required_argument,	NULL, 'I'},
 	{0, 0, 0, 0}
 };
 
 static const char *shortUsage = {
-	"[-ACDFIKLMQSUVWYcdfh] [-l file] [-n list] [-s ip] [-p port] [-i {n|r|x}] "
-	"[-m {n|r|x|a}] [-v DEBUG|INFO|WARN|ERROR|FATAL] [-x mregex] [-X sregex]"
+	"[-ACDFIKLMOQSUVWYcdfh] [-T list]  [-i {n|r|x}] [-l file] [-n list] "
+	"[-m {n|r|x|a}] [-p port] [-s ip] [-t {n|r|x|a}] "
+	"[-v DEBUG|INFO|WARN|ERROR|FATAL]"
 };
 
 typedef struct node_cfg {
@@ -100,12 +99,10 @@ typedef struct node_cfg {
 	bool no_sys_mem;
 	vm_stat_quantity_t vmstat_type;
 	cpu_sys_quantity_t cpusys_type;
+	nic_stat_quantity_t nicstat_type;
+	nic_filter_chain_t *nfc;
 	bool no_vmstat_mp;
 	bool no_cpusys_mp;
-	regex_t *exc_metrics;
-	regex_t *exc_sensors;
-	regex_t *inc_metrics;
-	regex_t *inc_sensors;
 } node_cfg_t;
 
 static struct {
@@ -148,12 +145,10 @@ static struct {
 		.no_sys_mem = false,
 		.vmstat_type = VMSTAT_NORMAL,
 		.cpusys_type = CPUSYS_NORMAL,
+		.nicstat_type = NICSTAT_NORMAL,
+		.nfc = NULL,
 		.no_vmstat_mp = true,
 		.no_cpusys_mp = true,
-		.exc_metrics = NULL,
-		.exc_sensors = NULL,
-		.inc_metrics = NULL,
-		.inc_sensors = NULL
 	}
 };
 
@@ -198,6 +193,7 @@ disableMetrics(char *skipList) {
 				global.ncfg.no_sys_mem = true;
 				global.ncfg.vmstat_type = VMSTAT_NONE;
 				global.ncfg.cpusys_type = CPUSYS_NONE;
+				global.ncfg.nicstat_type = NICSTAT_NONE;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -244,19 +240,20 @@ collect(prom_collector_t *self) {
 		collect_boottime(sb, compact);
 		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
 		if ((kc_new = ks_chain_open_or_update(kc)) != NULL) {
-			uint8_t again = sb == NULL;
+			uint8_t again = 0;
 			kc = kc_new;
 			kstat_err_count = 0;
 			if (!global.ncfg.no_load)
 				collect_load(sb, compact, kc, now);
 			if (!global.ncfg.no_procq) {
 				collect_procq(sb, compact, kc, now);
-				again |= 1 << 1;
+				if (sb == NULL)
+					again |= 1 << 1;
 			}
 			// To avoid confusion we do not use the kstat riemann sums
 			if (!global.ncfg.no_swap)
 				collect_swap(sb, compact, NULL, now);
-			if (again & 1) {
+			if (again > 0) {
 				fprintf(stderr, "\n# CLI: Waiting 1s for kernel sample update ...\n");
 				sleep(1);	// give kernel time to update its records
 				if (again & (1 << 1))
@@ -274,6 +271,9 @@ collect(prom_collector_t *self) {
 			if (global.ncfg.cpusys_type != CPUSYS_NONE)
 				collect_cpusys(sb, compact, kc, now,
 					!global.ncfg.no_cpusys_mp, global.ncfg.cpusys_type);
+			if (global.ncfg.nicstat_type != NICSTAT_NONE)
+				collect_nicstat(sb, compact, kc, now, global.ncfg.nicstat_type,
+					global.ncfg.nfc);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
@@ -633,7 +633,6 @@ main(int argc, char **argv) {
 	struct in6_addr *addr = malloc(sizeof(struct in6_addr));
 	psb_t *buf;
 	char *str = getShortOpts(options);
-	char *exm = NULL, *exs = NULL, *inm = NULL, *ins = NULL;
 
 	system_cpu_max = sysconf(_SC_CPUID_MAX);
 	while (1) {
@@ -677,6 +676,10 @@ main(int argc, char **argv) {
 				break;
 			case 'S':
 				global.promflags &= ~PROM_SCRAPETIME_ALL;
+				break;
+			case 'T':
+				if (parse_nic_filter(optarg, &(global.ncfg.nfc)) != 0)
+				err++;
 				break;
 			case 'U':
 				global.ncfg.no_units = true;
@@ -786,6 +789,32 @@ main(int argc, char **argv) {
 					addr = NULL;
 				}
 				break;
+			case 't':
+				if ((strcmp("n", optarg) == 0) || (strcmp("no", optarg) == 0)
+					|| (strcmp("none", optarg) == 0)
+					|| (strcmp("0", optarg) == 0))
+				{
+					global.ncfg.nicstat_type = NICSTAT_NONE;
+				} else if ((strcmp("y", optarg) == 0) || (strcmp("r", optarg) == 0)
+					|| (strcmp("yes", optarg) == 0) || (strcmp("regular", optarg) == 0)
+					|| (strcmp("normal", optarg) == 0)
+					|| (strcmp("1", optarg) == 0))
+				{
+					global.ncfg.nicstat_type = NICSTAT_NORMAL;
+				} else if ((strcmp("x", optarg) == 0)
+					|| (strcmp("extended", optarg) == 0)
+					|| (strcmp("2", optarg) == 0))
+				{
+					global.ncfg.nicstat_type = NICSTAT_EXTENDED;
+				} else if ((strcmp("a", optarg) == 0)
+					|| (strcmp("all", optarg) == 0)
+					|| (strcmp("3", optarg) == 0))
+				{
+					global.ncfg.nicstat_type = NICSTAT_ALL;
+				} else {
+					fprintf(stderr, "Unsupported netstat type '%s' ignored.", optarg);
+				}
+				break;
 			case 'v':
 				n = prom_log_level_parse(optarg);
 				if (n == 0) {
@@ -796,16 +825,6 @@ main(int argc, char **argv) {
 					prom_log_level(n);
 				}
 				break;
-			case 'x':
-				if (exm)
-					free(exm);
-				exm = strdup(optarg);
-				break;
-			case 'X':
-				if (exs)
-					free(exs);
-				exs = strdup(optarg);
-				break;
 			case '?':
 				fprintf(stderr, "Usage: %s %s\n", argv[0], shortUsage);
 				return(1);
@@ -813,18 +832,6 @@ main(int argc, char **argv) {
 	}
 	free(str);
 	free(addr);
-	global.ncfg.exc_metrics = get_regex(&res, exm, "exclude metrics: ");
-	free(exm);
-	err += res;
-	global.ncfg.exc_sensors = get_regex(&res, exs, "exclude sensors: ");
-	free(exs);
-	err += res;
-	global.ncfg.inc_metrics = get_regex(&res, inm, "include metrics: ");
-	free(inm);
-	err += res;
-	global.ncfg.inc_sensors = get_regex(&res, ins, "include sensors: ");
-	free(ins);
-	err += res;
 
 	if (err)
 		return SMF_EXIT_ERR_CONFIG;

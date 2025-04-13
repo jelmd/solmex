@@ -456,6 +456,203 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_SYS_WRFAILS_T "counter"
 #define SOLMEX_SYS_WRFAILS_N solmex_node_sys_rw_wrfails
 
+
+// see  etc/kstat2solmex.sh -h
+#define SOLMEX_NET_NAME_PREFIX "solmex_node_net_"
+
+#define SOLMEX_NET_IFSPEED_BPS_D "Estimated bandwidth of the interface in bits per second"
+#define SOLMEX_NET_IFSPEED_BPS_T "counter"
+#define SOLMEX_NET_IFSPEED_BPS_N solmex_node_net_ifspeed_bps
+
+#define SOLMEX_NET_LINK_STATE_D "Link state of the interface (1..up, 0..down)"
+#define SOLMEX_NET_LINK_STATE_T "gauge"
+#define SOLMEX_NET_LINK_STATE_N solmex_node_net_link_state
+
+#define SOLMEX_NET_LRO_BADIPCSUMS_PKTS_D "Large Receive Offload: pakets with a bad IP checksums"
+#define SOLMEX_NET_LRO_BADIPCSUMS_PKTS_T "counter"
+#define SOLMEX_NET_LRO_BADIPCSUMS_PKTS_N solmex_node_net_lro_badipcsums_pkts
+
+#define SOLMEX_NET_LRO_BADTCPCSUMS_PKTS_D "Large Receive Offload: pakets with a bad TCP checksums"
+#define SOLMEX_NET_LRO_BADTCPCSUMS_PKTS_T "counter"
+#define SOLMEX_NET_LRO_BADTCPCSUMS_PKTS_N solmex_node_net_lro_badtcpcsums_pkts
+
+#define SOLMEX_NET_LRO_OUTSEQ_PKTS_D "Large Receive Offload: out of sequence pakets"
+#define SOLMEX_NET_LRO_OUTSEQ_PKTS_T "counter"
+#define SOLMEX_NET_LRO_OUTSEQ_PKTS_N solmex_node_net_lro_outseq_pkts
+
+#define SOLMEX_NET_LRO_TRUNC_PKTS_D "Large Receive Offload: truncated pakets"
+#define SOLMEX_NET_LRO_TRUNC_PKTS_T "counter"
+#define SOLMEX_NET_LRO_TRUNC_PKTS_N solmex_node_net_lro_trunc_pkts
+
+#define SOLMEX_NET_PHYS_STATE_D "State of the physical link (1..sleep,2..polling,3..disabled,4..training,5..up,6..recovery,7..test)"
+#define SOLMEX_NET_PHYS_STATE_T "gauge"
+#define SOLMEX_NET_PHYS_STATE_N solmex_node_net_phys_state
+
+#define SOLMEX_NET_RX_BROADCAST_BYTES_D "Broadcast bytes successfully received"
+#define SOLMEX_NET_RX_BROADCAST_BYTES_T "counter"
+#define SOLMEX_NET_RX_BROADCAST_BYTES_N solmex_node_net_rx_broadcast_bytes
+
+#define SOLMEX_NET_RX_BROADCAST_PKTS_D "Broadcast packets successfully received"
+#define SOLMEX_NET_RX_BROADCAST_PKTS_T "counter"
+#define SOLMEX_NET_RX_BROADCAST_PKTS_N solmex_node_net_rx_broadcast_pkts
+
+#define SOLMEX_NET_RX_BYTES_D "Total bytes successfully received on the interface."
+#define SOLMEX_NET_RX_BYTES_T "counter"
+#define SOLMEX_NET_RX_BYTES_N solmex_node_net_rx_bytes
+
+#define SOLMEX_NET_RX_BYTES64_D "Total bytes successfully received on the interface"
+#define SOLMEX_NET_RX_BYTES64_T "counter"
+#define SOLMEX_NET_RX_BYTES64_N solmex_node_net_rx_bytes
+
+#define SOLMEX_NET_RX_DROP_BYTES_D "Incoming bytes dropped per datalink in the software"
+#define SOLMEX_NET_RX_DROP_BYTES_T "counter"
+#define SOLMEX_NET_RX_DROP_BYTES_N solmex_node_net_rx_drop_bytes
+
+#define SOLMEX_NET_RX_DROP_PKTS_D "Incoming packets dropped per datalink in the software"
+#define SOLMEX_NET_RX_DROP_PKTS_T "counter"
+#define SOLMEX_NET_RX_DROP_PKTS_N solmex_node_net_rx_drop_pkts
+
+#define SOLMEX_NET_RX_ERROR_PKTS_D "Total packets received that couldn't be processed because they contained errors"
+#define SOLMEX_NET_RX_ERROR_PKTS_T "counter"
+#define SOLMEX_NET_RX_ERROR_PKTS_N solmex_node_net_rx_error_pkts
+
+#define SOLMEX_NET_RX_INTRS_D "Times interrupt handler was called and claimed the interrupt"
+#define SOLMEX_NET_RX_INTRS_T "counter"
+#define SOLMEX_NET_RX_INTRS_N solmex_node_net_rx_intrs
+
+#define SOLMEX_NET_RX_INTRS_BYTES_D "Bytes processed when the interrupt handler was called and claimed the interrupt"
+#define SOLMEX_NET_RX_INTRS_BYTES_T "counter"
+#define SOLMEX_NET_RX_INTRS_BYTES_N solmex_node_net_rx_intrs_bytes
+
+#define SOLMEX_NET_RX_LOCAL_BYTES_D "Bytes transmitted via a loop back interface"
+#define SOLMEX_NET_RX_LOCAL_BYTES_T "counter"
+#define SOLMEX_NET_RX_LOCAL_BYTES_N solmex_node_net_rx_local_bytes
+
+#define SOLMEX_NET_RX_LOCAL_PKTS_D "Pakets received via a loop back interface"
+#define SOLMEX_NET_RX_LOCAL_PKTS_T "counter"
+#define SOLMEX_NET_RX_LOCAL_PKTS_N solmex_node_net_rx_local_pkts
+
+#define SOLMEX_NET_RX_MULTICAST_BYTES_D "Multicast bytes successfully received, including group and functional addresses"
+#define SOLMEX_NET_RX_MULTICAST_BYTES_T "counter"
+#define SOLMEX_NET_RX_MULTICAST_BYTES_N solmex_node_net_rx_multicast_bytes
+
+#define SOLMEX_NET_RX_MULTICAST_PKTS_D "Multicast packets successfully received, including group and functional addresses"
+#define SOLMEX_NET_RX_MULTICAST_PKTS_T "counter"
+#define SOLMEX_NET_RX_MULTICAST_PKTS_N solmex_node_net_rx_multicast_pkts
+
+#define SOLMEX_NET_RX_NOBUF_PKTS_D "Times a valid incoming packet was known to have been discarded because no buffer could be allocated for receive"
+#define SOLMEX_NET_RX_NOBUF_PKTS_T "counter"
+#define SOLMEX_NET_RX_NOBUF_PKTS_N solmex_node_net_rx_nobuf_pkts
+
+#define SOLMEX_NET_RX_PKTS_D "Total packets successfully received on the interface"
+#define SOLMEX_NET_RX_PKTS_T "counter"
+#define SOLMEX_NET_RX_PKTS_N solmex_node_net_rx_pkts
+
+#define SOLMEX_NET_RX_PKTS64_D "Total packets successfully received on the interface"
+#define SOLMEX_NET_RX_PKTS64_T "counter"
+#define SOLMEX_NET_RX_PKTS64_N solmex_node_net_rx_pkts
+
+#define SOLMEX_NET_RX_POLLS_D "hardware polls"
+#define SOLMEX_NET_RX_POLLS_T "counter"
+#define SOLMEX_NET_RX_POLLS_N solmex_node_net_rx_polls
+
+#define SOLMEX_NET_RX_POLLS_BYTES_D "bytes processed via hardware polls"
+#define SOLMEX_NET_RX_POLLS_BYTES_T "counter"
+#define SOLMEX_NET_RX_POLLS_BYTES_N solmex_node_net_rx_polls_bytes
+
+#define SOLMEX_NET_SEC_DHCPSPOOFED_PKTS_D "Spoofed DHCP pakets seen"
+#define SOLMEX_NET_SEC_DHCPSPOOFED_PKTS_T "counter"
+#define SOLMEX_NET_SEC_DHCPSPOOFED_PKTS_N solmex_node_net_sec_dhcpspoofed_pkts
+
+#define SOLMEX_NET_SEC_DHCPDROPPED_PKTS_D "Spoofed DHCP pakets dropped"
+#define SOLMEX_NET_SEC_DHCPDROPPED_PKTS_T "counter"
+#define SOLMEX_NET_SEC_DHCPDROPPED_PKTS_N solmex_node_net_sec_dhcpdropped_pkts
+
+#define SOLMEX_NET_SEC_IPSPOOFED_PKTS_D "Pakets with a spoofed IP dropped"
+#define SOLMEX_NET_SEC_IPSPOOFED_PKTS_T "counter"
+#define SOLMEX_NET_SEC_IPSPOOFED_PKTS_N solmex_node_net_sec_ipspoofed_pkts
+
+#define SOLMEX_NET_SEC_MACSPOOFED_PKTS_D "Pakets with a poofed MAC address dropped"
+#define SOLMEX_NET_SEC_MACSPOOFED_PKTS_T "counter"
+#define SOLMEX_NET_SEC_MACSPOOFED_PKTS_N solmex_node_net_sec_macspoofed_pkts
+
+#define SOLMEX_NET_SEC_RESTRICTED_PKTS_D "Pakets dropped, which are neither IP nor ARP pakets"
+#define SOLMEX_NET_SEC_RESTRICTED_PKTS_T "counter"
+#define SOLMEX_NET_SEC_RESTRICTED_PKTS_N solmex_node_net_sec_restricted_pkts
+
+#define SOLMEX_NET_TX_BLOCK_PKTS_D "Pakets received which could not be put up a stream because the queue was flow controlled (misc tx stats: times blocked for Tx descs)"
+#define SOLMEX_NET_TX_BLOCK_PKTS_T "counter"
+#define SOLMEX_NET_TX_BLOCK_PKTS_N solmex_node_net_tx_block_pkts
+
+#define SOLMEX_NET_TX_BROADCAST_BYTES_D "Broadcast bytes requested to be transmitted"
+#define SOLMEX_NET_TX_BROADCAST_BYTES_T "counter"
+#define SOLMEX_NET_TX_BROADCAST_BYTES_N solmex_node_net_tx_broadcast_bytes
+
+#define SOLMEX_NET_TX_BROADCAST_PKTS_D "Broadcast packets requested to be transmitted"
+#define SOLMEX_NET_TX_BROADCAST_PKTS_T "counter"
+#define SOLMEX_NET_TX_BROADCAST_PKTS_N solmex_node_net_tx_broadcast_pkts
+
+#define SOLMEX_NET_TX_BYTES_D "Total bytes requested to be transmitted on the interface"
+#define SOLMEX_NET_TX_BYTES_T "counter"
+#define SOLMEX_NET_TX_BYTES_N solmex_node_net_tx_bytes
+
+#define SOLMEX_NET_TX_BYTES64_D "Total bytes requested to be transmitted on the interface"
+#define SOLMEX_NET_TX_BYTES64_T "counter"
+#define SOLMEX_NET_TX_BYTES64_N solmex_node_net_tx_bytes
+
+#define SOLMEX_NET_TX_COLLS_D "Ethernet collisions during transmit"
+#define SOLMEX_NET_TX_COLLS_T "counter"
+#define SOLMEX_NET_TX_COLLS_N solmex_node_net_tx_colls
+
+#define SOLMEX_NET_TX_DROP_BYTES_D "Outgoing bytes dropped per datalink in the software"
+#define SOLMEX_NET_TX_DROP_BYTES_T "counter"
+#define SOLMEX_NET_TX_DROP_BYTES_N solmex_node_net_tx_drop_bytes
+
+#define SOLMEX_NET_TX_DROP_PKTS_D "Outgoing packets dropped per datalink in the software"
+#define SOLMEX_NET_TX_DROP_PKTS_T "counter"
+#define SOLMEX_NET_TX_DROP_PKTS_N solmex_node_net_tx_drop_pkts
+
+#define SOLMEX_NET_TX_ERROR_PKTS_D "Total packets that weren't successfully transmitted because of errors"
+#define SOLMEX_NET_TX_ERROR_PKTS_T "counter"
+#define SOLMEX_NET_TX_ERROR_PKTS_N solmex_node_net_tx_error_pkts
+
+#define SOLMEX_NET_TX_LOCAL_BYTES_D "Bytes transmitted via a loopback interface"
+#define SOLMEX_NET_TX_LOCAL_BYTES_T "counter"
+#define SOLMEX_NET_TX_LOCAL_BYTES_N solmex_node_net_tx_local_bytes
+
+#define SOLMEX_NET_TX_LOCAL_PKTS_D "Pakets transmitted via a loop back interface"
+#define SOLMEX_NET_TX_LOCAL_PKTS_T "counter"
+#define SOLMEX_NET_TX_LOCAL_PKTS_N solmex_node_net_tx_local_pkts
+
+#define SOLMEX_NET_TX_MISC_ERROR_PKTS_D "Mac misc stats: vid_check, tag needed errors"
+#define SOLMEX_NET_TX_MISC_ERROR_PKTS_T "counter"
+#define SOLMEX_NET_TX_MISC_ERROR_PKTS_N solmex_node_net_tx_misc_error_pkts
+
+#define SOLMEX_NET_TX_MULTICAST_BYTES_D "Multicast bytes requested to be transmitted, including group and functional addresses"
+#define SOLMEX_NET_TX_MULTICAST_BYTES_T "counter"
+#define SOLMEX_NET_TX_MULTICAST_BYTES_N solmex_node_net_tx_multicast_bytes
+
+#define SOLMEX_NET_TX_MULTICAST_PKTS_D "Multicast packets requested to be transmitted, including group and functional addresses"
+#define SOLMEX_NET_TX_MULTICAST_PKTS_T "counter"
+#define SOLMEX_NET_TX_MULTICAST_PKTS_N solmex_node_net_tx_multicast_pkts
+
+#define SOLMEX_NET_TX_NOBUF_PKTS_D "Packets discarded on output because transmit buffer was busy, or no buffer could be allocated for transmit"
+#define SOLMEX_NET_TX_NOBUF_PKTS_T "counter"
+#define SOLMEX_NET_TX_NOBUF_PKTS_N solmex_node_net_tx_nobuf_pkts
+
+#define SOLMEX_NET_TX_PKTS_D "Total packets requested to be transmitted on the interface"
+#define SOLMEX_NET_TX_PKTS_T "counter"
+#define SOLMEX_NET_TX_PKTS_N solmex_node_net_tx_pkts
+
+#define SOLMEX_NET_TX_PKTS64_D "Total packets requested to be transmitted on the interface"
+#define SOLMEX_NET_TX_PKTS64_T "counter"
+#define SOLMEX_NET_TX_PKTS64_N solmex_node_net_tx_pkts
+
+#define SOLMEX_NET_TX_UNBLOCK_CALLS_D "misc tx stats: unblock calls from driver"
+#define SOLMEX_NET_TX_UNBLOCK_CALLS_T "counter"
+#define SOLMEX_NET_TX_UNBLOCK_CALLS_N solmex_node_net_tx_unblock_calls
+
+
 /*
 #define SOLMEXM_XXX_D "short description."
 #define SOLMEXM_XXX_T "gauge"
