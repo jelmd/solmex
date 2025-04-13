@@ -23,104 +23,215 @@ solmex \- a metrics exporter for Solaris
 
 .SH "DESCRIPTION"
 .B solmex
-is a \fBm\fRetrics \fBex\fRporter for the Solaris OS.
-Collected data can be exposed via HTTP in Prometheus exposition format [1]
-e.g. using the default endpoint URL
-\fBhttp://\fIhostname\fB:\fI9290\fB/metrics\fR
-and thus visualized e.g. using Grafana [2], Netdata [3], or Zabbix [4].
+is a \fBm\fRetrics \fBex\fRporter for the Solaris operating system (OS).
+The collected data can be exposed via HTTP in the Prometheus exposition
+format [1], for example, using the default endpoint URL
+\fBhttp://\fIhostname\fB:\fI9290\fB/metrics\fR. This data can then be
+visualized using tools like Grafana [2], Netdata [3], or Zabbix [4].
 
-In contrast to prometheus' node_exporter
-\fBsolmex\fR is written in plain C (having KISS in mind)
-and thus it is extremely lightweight, has beside libprom, libmicrohttp and
-OS standard libs libc and libm no other dependencies, is more or less a
-standalone tool and handles Solaris kernel statistics efficiently.
-Running \fBsolmex\fR with root privileges should be safe, however,
-running \fBsolmex\fR as a normal, unprivileged user should be preferred.
+In contrast to Prometheus' node_exporter, \fBsolmex\fR is written in plain C
+having the KISS (Keep It Small and Simple) principle in mind. As a result,
+it is extremely lightweight and has no dependencies beyond libprom,
+libmicrohttpd, and basic standard OS libraries. It is essentially a
+standalone tool that efficiently handles Solaris kernel statistics. While
+running \fBsolmex\fR with root privileges should be safe, it is recommended
+to run \fBsolmex\fR as a normal, unprivileged user whenever possible.
 
-As usual one should avoid to query any metrics not really needed.
-One may use the options \fB-x\fR,
-\fB-X\fR, \fB-i\fR, and \fB-I\fR with an extended regular expression (regex)
-argument to exclude/include metrics (lower case options) and to exclude/include
-stats by name (upper case options). Since the list of metrics to query gets
-constructed on the start of \fBsolmex\fR
-the complexity of the regex arguments have no
-impact when metrics actually get queried by a client.
-So there is no need to spent much
-time for optimizing the regexs - instead keep it small and simple.
-The include options take precedence over exclude options. So one may exclude
-all metrics (e.g. -x '.*') and include only the load agverage of the
-box (e.g. -i '.*_bootload_.*').
-
-\fBsolmex\fR operates in 3 modes:
+\fBsolmex\fR operates in three modes:
 
 .RS 2
 .IP \fBdefault\fR 2
-Just collects all data as it would for a /metrics HTTP request, print
-it to the standard output and exit.
+In this mode, \fBsolmex\fR collects all data as it would for a /metrics
+HTTP request, prints it to the standard output, and then exits.
 .IP \fBforeground\fR
-Start the internal HTTP server to answer HTTP requests, but stays
-attached to the console/terminal (i.e. standard input, output and error).
-Use option \fB-f\fR to request this mode.
+This mode starts the internal HTTP server to respond to HTTP requests,
+while remaining attached to the console or terminal (i.e., standard input,
+output, and error). Use the \fB-f\fR option to select this mode.
 .IP \fBdaemon\fR
-Start the internal HTTP server (daemon) to answer HTTP requests in the
-background (fork-exec model) in a new session, detach from the
-console/terminal, attach standard input, output and error to /dev/null
-and finally exit with exit code \fB0\fR, if the daemon is running as
-desired. Remember, if you do not specify a logfile to use, all messages
-emitted by the daemon get dropped.
-Use option \fB-d\fR to request this mode.
+This mode also starts the internal HTTP server as a daemon in the background
+using a fork-exec model. It operates in a new session, detaches from the
+console or terminal, and redirects standard input, output, and error
+to /dev/null. It exits with an exit code of \fB0\fR if the daemon starts
+successfully. Note that if no logfile is specified, all messages from the
+daemon will be discarded. Use the \fB-d\fR option to select this mode.
 .RE
 
-\fBsolmex\fR answers one HTTP request after another to have a
-very small footprint wrt. the system and queried device. So it is
-recommended to adjust your firewalls and/or HTTP proxies accordingly.
-If you need SSL or authentication, use a HTTP proxy like nginx - remember:
-\fBsolmex\fR should be kept as small and simple as possible.
+\fBsolmex\fR processes one HTTP request at a time to minimize system and
+device resource usage. Therefore it is advised to adjust firewalls and/or
+HTTP proxies accordingly. For SSL or authentication needs, a proxy server
+like nginx can be used, as \fBsolmex\fR is designed to remain as small
+and simple as possible.
 
-When \fBsolmex\fR runs in \fBforeground\fR or \fBdaemon\fR mode, it also
-returns by default the duration of the following data collect and format tasks:
+When running in \fBforeground\fR or \fBdaemon\fR mode, \fBsolmex\fR returns,
+by default, the duration of the following data collection and formatting tasks:
 .RS 2
 .TP 2
 .B default
-HTTP related statistics.
+Tasks related to HTTP operations.
 .TP
 .B process
-\fBsolmex\fR process related data.
+Tasks related to the \fBsolmex\fR process itself.
 .TP
 .B node
-OS/kernel related statistics.
+Tasks concerning the OS/kernel statistics.
 .TP
 .B libprom
-All tasks together, i.e. sum of the default, process, and node task.
+The time taken to collect and format the data from all other collectors
+mentioned above in the Prometheus format.
 .RE
 
 .SH "OPTIONS"
 .P
-The following options are supported:
+The following options are supported, with the corresponding kstat instances
+indicated in bold text within parentheses
+
+.TP
+.B \-A
+.PD 0
+.TP
+.B \-\-no\-loadaverage
+Disable all \fBsolmex_node_load\fI*\fR metrics (\fBunix:0:system_misc\fR) -
+system load averages and memory deficit.
+
+.TP
+.B \-B
+.PD 0
+.TP
+.B \-\-no\-boottime
+Disable the \fBsolmex_node_boot_time_seconds\fR metric. It gets determined only
+once and is therefore very cheap.
+
+.TP
+.B \-C
+.PD 0
+.TP
+.B \-\-no\-clock\-freq\-max
+Disable the \fBsolmex_node_cpu_frequency_max_hertz\fR metric (\fBcpu_info::\fR) -
+CPU max. clock limit.
+
+.TP
+.B \-D
+.PD 0
+.TP
+.B \-\-no\-dmi
+Disable the \fBsolmex_node_dmi_info\fR metric - machine infos obtained from the
+BIOS using the smbios lib. It gets constructed only once and has always the same
+value, so very cheap.
+
+.TP
+.B \-F
+.PD 0
+.TP
+.B \-\-no\-clock\-freq
+Disable all \fBsolmex_node_cpu_frequency\fI*\fB_hertz\fR (\fBcpu_info::\fR) -
+current and max. CPU clock values.
+
+.TP
+.B \-I
+.PD 0
+.TP
+.B \-\-sysinfo\-mp
+Enable system info metrics \fBsolmex_node_sys_\fI*\fR for each individual
+CPU strand also known as thread. By default overall metrics (cpu="sum") are
+emitted, only (\fBcpu::sys\fR).
+
+.TP
+.B \-K
+.PD 0
+.TP
+.B \-\-no\-kstats
+Disable all metrics obtaining its data using the kernel's kstat framework.
 
 .TP
 .B \-L
 .PD 0
 .TP
 .B \-\-no\-scrapetime
-Disable the overall scrapetime metrics (libprom collector), i.e. the time
-elapsed when scraping all the required data. One needs to also disable
-collecting scrapetimes of all other collectors before this option
-gets honored. This is very helpful when one tries to determine the stats query
-interval to use.
+Disable the overall scrapetime metrics of the libprom collector, which
+measure the time elapsed when scraping all the required data. To enable
+this option, you must also disable the collection of scrapetimes for all
+other collectors before this one gets honored. It can be particularly
+useful for determining the optimal statistics query interval.
+
+.TP
+.B \-M
+.PD 0
+.TP
+.B \-\-vmstat\-mp
+Enable system paging/swapping metrics \fBsolmex_node_vm_\fI*\fR for each
+individual CPU strand also known as thread. By default overall metrics
+(cpu="sum") are emitted, only (\fBcpu::vm\fR).
+
+.TP
+.B \-O
+.PD 0
+.TP
+.B \-\-no\-cpu\-state
+Disable CPU online/offline metrics \fBsolmex_node_cpus_total\fR.
+
+.TP
+.B \-P
+.PD 0
+.TP
+.B \-\-no\-cpu-info
+Disable CPU package info metrics \fBsolmex_node_cpu_info\fR (\fBcpu_info::\fR).
+
+.TP
+.B \-Q
+.PD 0
+.TP
+.B \-\-no\-procq
+Disable process queue metrics \fBsolmex_node_procq_\fI*\fR (\fBunix:0:sysinfo\fR).
+Note that the data provided by the kernel are in the form of Riemann sums.
+Consequently, in daemon mode, the first sample is recorded to calculate the
+difference for the subsequent query but does not emit a metric. In CLI mode,
+\fBsolmex\fR waits approximately 1 second and performs the query a second time
+to provide usable data. Refer to the NOTES section below for additional
+information.
 
 .TP
 .B \-S
 .PD 0
 .TP
 .B \-\-no\-scrapetime\-all
-Disable recording the scrapetime of each collector separately. There is
-one collector named \fBdefault\fR, which collects HTTP request/response
-statistics, the optional \fBprocess\fR collector, which records metrics
-about the solmex process itself, the \fBnode\fR collector, which queries
-the OS/kernel for metrics, and finally the \fBlibprom\fR collector,
-which just records the time it took to collect and prom-format the data
-of all other collectors.
+Disable recording the scrapetime for all collectors, i.e. \fBdefault\fR,
+\fBprocess\fR, \fBnode\fR, and \fBlibprom\fR, as described above.
+
+.TP
+.BI \-T " list"
+.PD 0
+.TP
+.BI \-\-nics= list
+If collecting statistics for network interfaces (NICs) is enabled, this
+option allows you to narrow down the set of NICs to monitor. The list is
+a comma-separated series of regular expressions (regex). Each regex can be
+prefixed with an exclude/include operator: one of the letters
+\fBP\fR, \fBp\fR, \fBV\fR, \fBv\fR, \fBA\fR, or \fBa\fR, followed by a
+colon (\fB:\fR). This operator applies to all subsequent regexes until
+another regex with a different include/exclude operator is encountered.
+Uppercase letters denote the \fBexclude\fR operation, while lowercase letters
+denote the include operation. \fBP\fR and \fBp\fR are applied to
+\fBphysical\fR NICs, \fBV\fR and \fBv\fR to \fBvirtual\fR NICs, while
+\fBA\fR and \fBa\fR can be used for either type. If the first regex does not
+have an include/exclude operator, the include operation is implied. If the
+first regex indicates an include operation, the initial set contains no NICs;
+otherwise, it contains all available NICs.
+
+For example to include only virtual NICs, you can specify -T 'P:.*', what
+makes sense if no physical NICs are used directly (e.g. if they are part of
+an aggregation or accessed indirectly via virtual NICs). In such cases,
+Solaris does not maintain any statistics for them, meaning all values except
+{phys,link}_state will be zero and thus are basically useless.
+
+.TP
+.B \-U
+.PD 0
+.TP
+.B \-\-no\-units
+Disable all \fBsolmex_node_unit_\fI*\fR metrics. They get determined once and
+are therefore very cheap. They are useful to let data visualizers like grafana
+properly convert e.g. quantities in bytes into system pages or system ticks
+into seconds and vice versa.
 
 .TP
 .B \-V
@@ -130,14 +241,28 @@ of all other collectors.
 Print \fBsolmex\fR version info and exit.
 
 .TP
+.B \-W
+.PD 0
+.TP
+.B \-\-no\-swap
+Disable the swap related \fBsolmex_node_swap_\fI*\fR metrics (\fBunix::vminfo\fR).
+
+.TP
+.B \-Y
+.PD 0
+.TP
+.B \-\-no\-mem
+Disable system memory related \fBsolmex_node_mem_\fI*\fR metrics (\fBunix::system_pages\fR).
+
+.TP
 .B \-c
 .PD 0
 .TP
 .B \-\-compact
-Sending a HELP and TYPE comment alias description about a metric is
-according to the Prometheus exposition format [1] optional. With this
-option they will be ommitted in the HTTP response and thus it saves
-bandwith and processing time.
+According to the Prometheus exposition format [1], sending a \fBHELP\fR
+and \fBTYPE\fR comment alias description for a metric is optional.
+By using this option, they will be omitted from the HTTP response,
+thus saving bandwidth and processing time.
 
 .TP
 .B \-d
@@ -161,6 +286,17 @@ Run \fBsolmex\fR in \fBforeground\fR mode.
 Print a short help summary to the standard output and exit.
 
 .TP
+.BI \-i " mode"
+.PD 0
+.TP
+.BI \-\-sysinfo= mode
+Specify which of the \fBsolmex_node_sys_\fI*\fR metrics to emit (\fBcpu::sys\fR).
+Supported modes are: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r),
+\fBextended\fR (2|x), and \fBall\fR (3|a). By default, \fBnormal\fR is used,
+and system overall metrics (cpu="sum") are calculated.
+To enable CPU strand (also known as thread-wise) metrics, add the option \fB-I\fR.
+
+.TP
 .BI \-l " file"
 .PD 0
 .TP
@@ -172,8 +308,8 @@ Log all messages to the given \fIfile\fR when the main process is running.
 .PD 0
 .TP
 .BI \-\-no-metric= list
-Skip all the metrics given in the comma separated \fIlist\fR of identifiers.
-Currently supported are:
+Skip all the metric collections given in the comma separated \fIlist\fR of
+identifiers. Currently supported are:
 
 .RS 4
 
@@ -182,8 +318,7 @@ Currently supported are:
 All \fsolmex_version\fR metrics (default collector).
 .TP 4
 .B node
-All \fBsolmex_node_*\fR metrics (node collector). See option \-x, \-X, \-i
-and \-I for a little bit more fine grained selection.
+All \fBsolmex_node_*\fR metrics (node collector).
 .TP 4
 .B process
 All \fBsolmex_process_*\fR metrics (process collector).
@@ -191,22 +326,47 @@ All \fBsolmex_process_*\fR metrics (process collector).
 .RE
 
 .TP
+.BI \-m " mode"
+.PD 0
+.TP
+.BI \-\-vmstats= mode
+Specify which of the \fBsolmex_node_vm_\fI*\fR metrics to emit (\fBcpu::vm\fR).
+Supported modes are: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r),
+\fBextended\fR (2|x), and \fBall\fR (3|a). By default, \fBnormal\fR is used,
+and system overall metrics (cpu="sum") are calculated.
+To enable CPU strand (also known as thread-wise) metrics, add the option \fB-M\fR.
+
+.TP
 .BI \-p " num"
 .PD 0
 .TP
 .BI \-\-port= num
-Bind to port \fInum\fR and listen there for HTTP requests. Note that a port
-below 1024 usually requires additional privileges. Default: 9100
+Bind to port \fInum\fR and listen for HTTP requests on that port. Note that
+using a port below 1024 typically requires additional privileges. The
+default port is 9100.
 
 .TP
 .BI \-s " IP"
 .PD 0
 .TP
 .BI \-\-source= IP
-Bind the HTTP server to the given \fIIP\fR address, only. Per default
-it binds to 0.0.0.0, i.e. all IPs configured on this host/zone/container.
-If you want to enable IPv6, just specify an IPv6 address here (\fB::\fR
-is the same for IPv6 as 0.0.0.0 for IPv4).
+Bind the HTTP server exclusively to the specified \fIIP\fR address.
+By default, it binds to 0.0.0.0, which means it will listen on all
+IP addresses configured on this host, or zone. To enable IPv6, specify
+an IPv6 address here (\fB::\fR serves the same purpose for IPv6 as 0.0.0.0
+does for IPv4).
+
+.TP
+.BI \-t " mode"
+.PD 0
+.TP
+.BI \-\-nicstats= mode
+Specify which of the \fBsolmex_node_net_\fI*\fR metrics to emit (\fB:0:link\fR
+and \fBlink:0:\fR as fallback).
+Supported modes are: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r),
+\fBextended\fR (2|x), and \fBall\fR (3|a). By default, \fBnormal\fR is used,
+and metrics for every physical and virtual NIC are calculated.
+To reduce the set of evaluated NICs use the option \fB-T\ ...\fR .
 
 .TP
 .BI \-v " level"
@@ -217,69 +377,28 @@ Set the message verbosity to the given \fIlevel\fR. Accepted tokens are
 \fBDEBUG\fR, \fBINFO\fR, \fBWARN\fR, \fBERROR\fR, \fBFATAL\fR and for
 convenience \fB1\fR..\fB5\fR respectively.
 
-.P
-The following flags are related to the node task and compared against stats
-reading metrics (\fBsolmex_node_*\fR), only.
-If you need a more fine grained
-selection, consider to use a proxy (e.g.  VictoriaMetrics vmagent or nginx,
-etc.).
-
-.TP
-.BI \-x " regex"
-.PD 0
-.TP
-.BI \-\-exclude-metrics= regex
-Exclude all metrics from the node task whoms name matches the given extended
-regular expression \fIregex\fR (see also \fBregcomp\fR(3C)).
-
-.TP
-.BI \-X " regex"
-.PD 0
-.TP
-.BI \-\-exclude-stats= regex
-Exclude all metrics from the node task whoms stats name matches the given
-extended regular expression \fIregex\fR (see also \fBregcomp\fR(3C)).
-
-.TP
-.BI \-i " regex"
-.PD 0
-.TP
-.BI \-\-include-metrics= regex
-Include all metrics from the node task whoms name matches the given extended
-regular expression \fIregex\fR (see also \fBregcomp\fR(3C)). Takes precedence
-over excludes (see -X ... and -x ...).
-
-.TP
-.BI \-I " regex"
-.PD 0
-.TP
-.BI \-\-include-stats= regex
-Include all metrics from the node task whoms stats name matches the given
-extended regular expression \fIregex\fR (see also \fBregcomp\fR(3C)). Takes
-precedence over excludes (see -X ... and -x ...).
-
 .SH "EXIT STATUS"
 .TP 4
 .B 0
 on success.
 .TP
 .B 1
-if an unexpected error occurred during the start (other problem).
+If an unexpected error occurred during the start (other problem).
 .TP
 .B 96
-if an invalid option or option value got passed (config problem).
+If an invalid option or option value got passed (config problem).
 .TP
 .B 100
-if the logfile is not writable or port access is not allowed (permission problem).
+If the logfile is not writable or port access is not allowed (permission problem).
 
 .SH "ENVIRONMENT"
 
 .TP 4
 .B PROM_LOG_LEVEL
-If no verbosity level got specified via option \fB-v\ \fI...\fR, this
-environment variable gets checked for a verbosity value. If there is a
-valid one, the verbosity level gets set accordingly, otherwise \fBINFO\fR
-level will be used.
+If no verbosity level is specified using the \fB-v \fI...\fR option,
+this environment variable is checked for a verbosity value. If a valid
+value is found, the verbosity level is set accordingly; otherwise, the
+default level of \fBINFO\fR will be used.
 
 .SH "FILES"
 .TP 4
