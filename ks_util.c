@@ -98,7 +98,7 @@ update_instance(kstat_ctl_t *kc, ks_info_t *ks) {
 		return 0;
 	}
 	tmp_ksp[found++] = ksp;
-	if (ks->instance < 0 || ks->name == NULL) {
+	if (ks->instance < 0 || ks->name == NULL || ks->module == NULL) {
 		// wildcards - so try to find more
 		for (ksp = ksp->ks_next; ksp; ksp = ksp->ks_next) {
 			if (ks->module != NULL && (strcmp(ks->module, ksp->ks_module) != 0))
