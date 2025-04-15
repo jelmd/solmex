@@ -50,6 +50,7 @@ typedef enum {
 
 static struct option options[] = {
 	{"no-loadaverage",		no_argument,		NULL, 'A'},
+	{"no-boottime",			no_argument,		NULL, 'B'},
 	{"no-clock-freq-max",	no_argument,		NULL, 'C'},
 	{"no-dmi",				no_argument,		NULL, 'D'},
 	{"no-clock-freq",		no_argument,		NULL, 'F'},
@@ -58,6 +59,7 @@ static struct option options[] = {
 	{"no-scrapetime",		no_argument,		NULL, 'L'},
 	{"vmstats-mp",			no_argument,		NULL, 'M'},
 	{"no-cpu-state",		no_argument,		NULL, 'O'},
+	{"no-cpu-info",			no_argument,		NULL, 'P'},
 	{"no-procq",			no_argument,		NULL, 'Q'},
 	{"no-scrapetime-all",	no_argument,		NULL, 'S'},
 	{"nic-filter",			required_argument,	NULL, 'T'},
@@ -81,12 +83,13 @@ static struct option options[] = {
 };
 
 static const char *shortUsage = {
-	"[-ACDFIKLMOQSUVWYcdfh] [-T list]  [-i {n|r|x}] [-l file] [-n list] "
+	"[-ABCDFIKLMOPQSUVWYcdfh] [-T list]  [-i {n|r|x}] [-l file] [-n list] "
 	"[-m {n|r|x|a}] [-p port] [-s ip] [-t {n|r|x|a}] "
 	"[-v DEBUG|INFO|WARN|ERROR|FATAL]"
 };
 
 typedef struct node_cfg {
+	bool no_boot;
 	bool no_dmi;
 	bool no_kstats;
 	bool no_load;
@@ -94,6 +97,7 @@ typedef struct node_cfg {
 	bool no_procq;
 	bool no_swap;
 	bool no_cpu_state;
+	bool no_cpu_info;
 	bool no_cpu_speed;
 	bool no_cpu_speed_max;
 	bool no_sys_mem;
@@ -133,6 +137,7 @@ static struct {
 	.ipv6 = false,
 	.no_node = false,
 	.ncfg = {
+		.no_boot = false,
 		.no_dmi = false,
 		.no_kstats = false,
 		.no_load = false,
@@ -140,6 +145,7 @@ static struct {
 		.no_procq = false,
 		.no_swap = false,
 		.no_cpu_state = false,
+		.no_cpu_info = false,
 		.no_cpu_speed = false,
 		.no_cpu_speed_max = false,
 		.no_sys_mem = false,
@@ -184,6 +190,8 @@ disableMetrics(char *skipList) {
 			else if (strcmp(s, "node") == 0) {
 				global.no_node = true;
 				// disable all children, too.
+				global.ncfg.no_boot = true;
+				global.ncfg.no_cpu_info = true;
 				global.ncfg.no_dmi = true;
 				global.ncfg.no_kstats = true;
 				global.ncfg.no_load = true;
@@ -237,8 +245,10 @@ collect(prom_collector_t *self) {
 		collect_cpu_state(sb, compact, now);
 	if (!global.ncfg.no_kstats) {
 		// static stuff
-		collect_boottime(sb, compact);
-		collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
+		if (!global.ncfg.no_boot)
+			collect_boottime(sb, compact);
+		if (!global.ncfg.no_cpu_info)
+			collect_cpuinfo(sb, compact);	// dmi collect should come 1st (lazy init)
 		if ((kc_new = ks_chain_open_or_update(kc)) != NULL) {
 			uint8_t again = 0;
 			kc = kc_new;
@@ -647,6 +657,9 @@ main(int argc, char **argv) {
 			case 'A':
 				global.ncfg.no_load = true;
 				break;
+			case 'B':
+				global.ncfg.no_boot = true;
+				break;
 			case 'C':
 				global.ncfg.no_cpu_speed_max = true;
 				break;
@@ -670,6 +683,9 @@ main(int argc, char **argv) {
 				break;
 			case 'O':
 				global.ncfg.no_cpu_state = true;
+				break;
+			case 'P':
+				global.ncfg.no_cpu_info = true;
 				break;
 			case 'Q':
 				global.ncfg.no_procq = true;
