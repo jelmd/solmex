@@ -176,10 +176,10 @@ function printIdx {
 
 function doMain {
 	[[ -z $1 || ! -s $1 ]] && { showUsage; return 1; }
-	doNet "$1"
+	[[ ${TARGET} == 'net' ]] && doNet "$1"
 }
 
-unset VERB; integer VERB=0
+unset VERB TARGET; integer VERB=0
 USAGE="[-?${VERSION}"' ]
 [-copyright?Copyright (c) 2025 Jens Elkner. All rights reserved.]
 [-license?CDDL 1.0]
@@ -188,6 +188,8 @@ USAGE="[-?${VERSION}"' ]
 [h:help?Print this help and exit.]
 [F:functions?Print a list of all functions available.]
 [T:trace]:[functionList?A comma separated list of functions of this script to trace (convinience for troubleshooting).] 
+[+?]
+[t:target]:[name?Generate for the \aname\ad metrics class. Currently supported: \bnet\b, \bzfs\b.]
 [v:verbose?Print kstat data names to metric name mapping as discovered on stderr.]
 \n\n
 \akstat_output\a
@@ -205,6 +207,7 @@ while getopts "${X}" OPT ; do
 			;;
 		F) typeset +f && exit 0 ;;
 		v) VERB=1 ;;
+		t) TARGET="${OPTARG}" ;;
 		*) showUsage 1 ; exit 1 ;;
 	esac
 done
