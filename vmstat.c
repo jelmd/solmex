@@ -42,12 +42,27 @@ kstat cpu:0:vm | tail +3 | awk '{ if ($1 ~ "crtime|snaptime|^$") next; \
 	"NULL\n};\ntypedef enum vm_idx {" Y \
 	"VM_IDX_MAX} vm_idx_t;\nstatic const char *sdesc[] = {" D "NULL\n};" }'
 */
-static const char *snames[] = {
+static const char *knames[] = {
 	"anonfree", "anonpgin", "anonpgout", "as_fault", "cow_fault", "dfree",
 	"execfree", "execpgin", "execpgout", "fsfree", "fspgin", "fspgout",
 	"hat_fault", "kernel_asflt", "maj_fault", "pgfrec", "pgin", "pgout",
 	"pgpgin", "pgpgout", "pgrec", "pgrrun", "pgswapin", "pgswapout",
 	"prot_fault", "rev", "scan", "softlock", "swapin", "swapout", "zfod", NULL
+};
+static const char *snames[] = {
+#define STRINGIFY(x) #x
+#define _S(x) STRINGIFY(x)
+	_S(SOLMEX_VM_ANONFREE_N),	_S(SOLMEX_VM_ANONPGIN_N),		_S(SOLMEX_VM_ANONPGOUT_N),
+	_S(SOLMEX_VM_AS_FAULT_N),	_S(SOLMEX_VM_COW_FAULT_N),		_S(SOLMEX_VM_DFREE_N),
+	_S(SOLMEX_VM_EXECFREE_N),	_S(SOLMEX_VM_EXECPGIN_N),		_S(SOLMEX_VM_EXECPGOUT_N),
+	_S(SOLMEX_VM_FSFREE_N),		_S(SOLMEX_VM_FSPGIN_N),			_S(SOLMEX_VM_FSPGOUT_N),
+	_S(SOLMEX_VM_HAT_FAULT_N),	_S(SOLMEX_VM_KERNEL_ASFLT_N),	_S(SOLMEX_VM_MAJ_FAULT_N),
+	_S(SOLMEX_VM_PGFREC_N),		_S(SOLMEX_VM_PGIN_N),			_S(SOLMEX_VM_PGOUT_N),
+	_S(SOLMEX_VM_PGPGIN_N),		_S(SOLMEX_VM_PGPGOUT_N),		_S(SOLMEX_VM_PGREC_N),
+	_S(SOLMEX_VM_PGRRUN_N),		_S(SOLMEX_VM_PGSWAPIN_N),		_S(SOLMEX_VM_PGSWAPOUT_N),
+	_S(SOLMEX_VM_PROT_FAULT_N),	_S(SOLMEX_VM_REV_N),			_S(SOLMEX_VM_SCAN_N),
+	_S(SOLMEX_VM_SOFTLOCK_N),	_S(SOLMEX_VM_SWAPIN_N),			_S(SOLMEX_VM_SWAPOUT_N),
+	_S(SOLMEX_VM_ZFOD_N),		NULL
 };
 static const char *sdesc[] = {
 	SOLMEX_VM_ANONFREE_D,	SOLMEX_VM_ANONPGIN_D,		SOLMEX_VM_ANONPGOUT_D,
@@ -87,7 +102,7 @@ static vm_idx_t nstats[] = {
 static uint32_t nstats_sz = ARRAY_SIZE(nstats);
 
 static vm_idx_t xstats[] = {
-	VM_IDX_EXECPGIN, VM_IDX_EXECPGOUT, VM_IDX_EXECPGOUT,
+	VM_IDX_EXECPGIN, VM_IDX_EXECPGOUT, VM_IDX_EXECFREE,
 	VM_IDX_ANONPGIN, VM_IDX_ANONPGOUT, VM_IDX_ANONFREE,
 	VM_IDX_FSPGIN, VM_IDX_FSPGOUT, VM_IDX_FSFREE
 };
@@ -178,7 +193,7 @@ getx:
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 		for (l = 0; l < what_sz; l++) {
 			k = what[l];
-			if ((knp = kstat_data_lookup(ksp, snames[k])) != NULL) {
+			if ((knp = kstat_data_lookup(ksp, knames[k])) != NULL) {
 				vals[sidx + k] += knp->value.ui64;
 				if (mp)
 					vals[idx + k] = knp->value.ui64;
@@ -206,12 +221,11 @@ valx:
 	for (l = 0; l < what_sz; l++) {
 		k = what[l];
 		if (!compact)
-			addPromInfo4(SOLMEX_VM_NAME_PREFIX, snames[k], "counter", sdesc[k]);
+			addPromInfo4("", snames[k], "counter", sdesc[k]);
 		idx = 0;
 		for (i = mp ? 0 : n; i <= n; i++, idx += VM_IDX_MAX) {
 			if (!seen[i])
 				continue;
-			psb_add_str(sb, SOLMEX_VM_NAME_PREFIX);
 			psb_add_str(sb, snames[k]);
 			if (i == n) {
 				sprintf(buf, "{cpu=\"sum\"} %ld\n", vals[sidx + k]);
