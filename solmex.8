@@ -377,6 +377,47 @@ Set the message verbosity to the given \fIlevel\fR. Accepted tokens are
 \fBDEBUG\fR, \fBINFO\fR, \fBWARN\fR, \fBERROR\fR, \fBFATAL\fR and for
 convenience \fB1\fR..\fB5\fR respectively.
 
+.SH "EXAMPLES"
+To disable all metrics e.g. to find out step-by-step what you really need, one
+may use the following command:
+.RS 4
+.B solmex\ \-ABCDFOPQUWY\ \-i\ none\ \-m\ none\ \-t\ none
+.RE
+
+To run solmex as daemon and have it provide all data usually shown
+in \fBvmatst\fR(1M) and \fBmpstat\fR(1M) use at least:
+TBD
+.RS 4
+.B solmex\ \-ABCDFOPQUWY\ \-i\ x\ \-m\ x\ \-t\ none
+.RE
+
+However, one probably wants to have basic network metrics enabled, too. E.g.
+using:
+.RS 4
+.B solmex\ \-ABCDFOPQUWY\ \-i\ x\ \-m\ x\ \-T\ 'P:.*'
+.RE
+
+FWEIIW: We use VictoriaMetrics vmagent to collect metrics and send it to the
+VictoriaMetrics timeseries database. The solmex instance used to query
+the Solaris OS gets started as a service using the command:
+
+.RS 4
+.B solmex\ \-cdF\ \-i\ x\ \-m\ x\ \-t\ x\ \-T\ 'P:.*'\ \-n\ version
+.RE
+
+and provides all metrics one needs for a day-by-day monitoring. So this is the
+recommended usage.
+
+
+.SH "ENVIRONMENT"
+
+.TP 4
+.B PROM_LOG_LEVEL
+If no verbosity level is specified using the \fB-v \fI...\fR option,
+this environment variable is checked for a verbosity value. If a valid
+value is found, the verbosity level is set accordingly; otherwise, the
+default level of \fBINFO\fR will be used.
+
 .SH "EXIT STATUS"
 .TP 4
 .B 0
@@ -390,15 +431,6 @@ If an invalid option or option value got passed (config problem).
 .TP
 .B 100
 If the logfile is not writable or port access is not allowed (permission problem).
-
-.SH "ENVIRONMENT"
-
-.TP 4
-.B PROM_LOG_LEVEL
-If no verbosity level is specified using the \fB-v \fI...\fR option,
-this environment variable is checked for a verbosity value. If a valid
-value is found, the verbosity level is set accordingly; otherwise, the
-default level of \fBINFO\fR will be used.
 
 .SH "FILES"
 .TP 4

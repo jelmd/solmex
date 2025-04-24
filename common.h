@@ -218,11 +218,11 @@ extern uint64_t tps;
 
 #define SOLMEXM_NFREE_D "Total calls to free allocated memory"
 #define SOLMEXM_NFREE_T "counter"
-#define SOLMEXM_NFREE_N "solmex_node_mem_free_calls"
+#define SOLMEXM_NFREE_N "solmex_node_mem_nfree_calls"
 
 #define SOLMEXM_NFREESZ_D "Total allocated memory freed"
 #define SOLMEXM_NFREESZ_T "counter"
-#define SOLMEXM_NFREESZ_N "solmex_node_mem_free_bytes"
+#define SOLMEXM_NFREESZ_N "solmex_node_mem_nfree_bytes"
 
 
 #define SOLMEX_VM_NAME_PREFIX "solmex_node_vm_"
@@ -362,19 +362,19 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 
 #define SOLMEX_SYS_CPU_TICKS_IDLE_D "idle ticks ('id' in vmstat, 'idl' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_IDLE_T "counter"
-#define SOLMEX_SYS_CPU_TICKS_IDLE_N solmex_node_sys_cpu_ticks_idle
+#define SOLMEX_SYS_CPU_TICKS_IDLE_N solmex_node_sys_cpu_idle_ticks
 
 #define SOLMEX_SYS_CPU_TICKS_KERNEL_D "kernel ticks ('cpu sy' in vmstat, 'sys' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_KERNEL_T "counter"
-#define SOLMEX_SYS_CPU_TICKS_KERNEL_N solmex_node_sys_cpu_ticks_kernel
+#define SOLMEX_SYS_CPU_TICKS_KERNEL_N solmex_node_sys_cpu_kernel_ticks
 
 #define SOLMEX_SYS_CPU_TICKS_USER_D "user ticks ('us' in vmstat, 'usr' in mpstat as %)"
 #define SOLMEX_SYS_CPU_TICKS_USER_T "counter"
-#define SOLMEX_SYS_CPU_TICKS_USER_N solmex_node_sys_cpu_ticks_user
+#define SOLMEX_SYS_CPU_TICKS_USER_N solmex_node_sys_cpu_user_ticks
 
 #define SOLMEX_SYS_CPU_TICKS_WAIT_D "waiting ticks ('st' in mpstat)"
 #define SOLMEX_SYS_CPU_TICKS_WAIT_T "counter"
-#define SOLMEX_SYS_CPU_TICKS_WAIT_N solmex_node_sys_cpu_ticks_wait
+#define SOLMEX_SYS_CPU_TICKS_WAIT_N solmex_node_sys_cpu_wait_ticks
 
 #define SOLMEX_SYS_INTR_D "device interrupts per PIL (PIL_MAX) array ('in' in vmstat, 'intr' in mpstat)"
 #define SOLMEX_SYS_INTR_T "counter"
