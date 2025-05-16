@@ -396,35 +396,62 @@ Set the message verbosity to the given \fIlevel\fR. Accepted tokens are
 \fBDEBUG\fR, \fBINFO\fR, \fBWARN\fR, \fBERROR\fR, \fBFATAL\fR and for
 convenience \fB1\fR..\fB5\fR respectively.
 
+.TP
+.BI \-z " fslist"
+.PD 0
+.TP
+.BI \-\-fsops= fslist
+\fIfslist\fR is a comma-separated list of filesystem types for which
+operation stats should be collected (\fB::vopstats_\fIfstype\fR).
+Supported types are \fBufs\fR, \fBuvfs\fR, \fBnfs\fR (NFSv2), \fBnfs3\fR,
+\fBnfs4\fR, \fBautofs\fR, \fBtmpfs\fR, \fBprocfs\fR, \fBmntfs\fR, \fBlofs\fR,
+\fBzfs\fR and \fBnone\fR. The default is \fBnfs4,zfs\fR.
+Optionally, one may prefix an fstype with the zonename followed by a
+colon to apply the fstypes which follow to the named zone only.
+If no zonename has been specified, the fstype list replaces the default fstype
+list. To collect vopstats only for the zone running \fBsolmex\fR,
+use \fBthis:\fR (or an empty argument, i.e. '', which is the same as
+\fB`zonename`:nfs4,zfs\fR). To collect stats for all available, not explicitly
+mentioned zones, use \fBany:\fR.
+So to mimic what \fBfsstat\ nfs3\ nfs4\ zfs\fR does, one could
+use \fB-z\ this:nfs3,nfs4,zfs\fR or \fB-z\ nfs3,nfs4,zfs,this:\fR.
+Note, because no fstype list follows \fBthis:\fR, the default is used,
+which was set right before \fBthis:\fR. Another example would be
+\fB-z\ nfs4,zfs,this:,mail:,home:,web:nfs4,zfs,tmpfs,any:zfs\fR
+or \fB-z\ any:\fR.
+
+
 .SH "EXAMPLES"
 To disable all metrics e.g. to find out step-by-step what you really need, one
 may use the following command:
 .RS 4
-.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ none\ \-m\ none\ \-t\ none
+.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ none\ \-m\ none\ \-t\ none\ \-z\ none
 .RE
 
 To run solmex as daemon and have it provide all data usually shown
 in \fBvmatst\fR(1M) and \fBmpstat\fR(1M) use at least:
 TBD
 .RS 4
-.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ x\ \-m\ x\ \-t\ none
+.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ x\ \-m\ x\ \-t\ none\ \-z\ none
 .RE
 
-However, one probably wants to have basic network metrics enabled, too. E.g.
-using:
+However, one probably wants to have basic network as well as filesystem
+metrics enabled, too. E.g. using:
 .RS 4
 .B solmex\ \-ABCDFOPQUWY\ \-i\ x\ \-m\ x\ \-T\ 'P:.*'
 .RE
 
-FWEIIW: We use VictoriaMetrics vmagent to collect metrics and send it to the
+FWIIW: We use VictoriaMetrics vmagent to collect metrics and send it to the
 VictoriaMetrics timeseries database. The solmex instance used to query
 the Solaris OS gets started as a service using the command:
 
 .RS 4
-.B solmex\ \-cdF\ \-i\ x\ \-m\ x\ \-t\ x\ \-T\ 'P:.*'\ \-n\ version
+.B solmex\ \-cdF\ \-i\ x\ \-m\ x\ \-t\ x\ \-T\ 'P:.*'\ \e\ 
+.br
+.B \ \ \ \ \-n\ version\ \-z\ zfs,any:,homes:zfs,nfs4
 .RE
 
-and provides all metrics one needs for a day-by-day monitoring. So this is the
+and provides all metrics we need for a day-by-day monitoring. So this is the
 recommended usage.
 
 
