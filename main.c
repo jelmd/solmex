@@ -35,6 +35,7 @@
 #include "cpu_sys.h"
 #include "network.h"
 #include "mib.h"
+#include "fs.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -81,13 +82,14 @@ static struct option options[] = {
 	{"source",				required_argument,	NULL, 's'},
 	{"nicstats",			required_argument,	NULL, 't'},
 	{"verbosity",			required_argument,	NULL, 'v'},
+	{"fsops",				required_argument,	NULL, 'z'},
 	{0, 0, 0, 0}
 };
 
 static const char *shortUsage = {
 	"[-ABCDFIKLMOPQSUVWYcdfh] [-T list]  [-b {[i|c|u|t|s|n|r|x|a]}[,...]] "
 	"[-i {n|r|x}] [-l file] [-m {n|r|x|a}] [-n list] "
-	"[-p port] [-s ip] [-t {n|r|x|a}] "
+	"[-p port] [-s ip] [-t {n|r|x|a}] [-z list] "
 	"[-v DEBUG|INFO|WARN|ERROR|FATAL]"
 };
 
@@ -111,6 +113,7 @@ typedef struct node_cfg {
 	nic_filter_chain_t *nfc;
 	bool no_vmstat_mp;
 	bool no_cpusys_mp;
+	void *fscfg;
 } node_cfg_t;
 
 static struct {
@@ -160,6 +163,7 @@ static struct {
 		.nfc = NULL,
 		.no_vmstat_mp = true,
 		.no_cpusys_mp = true,
+		.fscfg = NULL,
 	}
 };
 
@@ -208,6 +212,7 @@ disableMetrics(char *skipList) {
 				global.ncfg.cpusys_type = CPUSYS_NONE;
 				global.ncfg.nicstat_type = NICSTAT_NONE;
 				global.ncfg.mibstat_mode = MIB_MODE_NONE;
+				global.ncfg.fscfg = NULL;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -292,6 +297,8 @@ collect(prom_collector_t *self) {
 					global.ncfg.nfc);
 			if (global.ncfg.mibstat_mode)
 				collect_mib(sb, compact, kc, now, global.ncfg.mibstat_mode);
+			if (global.ncfg.fscfg)
+				collect_fs(sb, compact, kc, now, global.ncfg.fscfg);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
@@ -645,7 +652,7 @@ get_regex(int *res, char *regex, const char *target) {
 int
 main(int argc, char **argv) {
 	uint32_t n, mode = 0;	// 0 .. oneshot  1 .. foreground  2 .. daemon
-	int err = 0, res, pfd = -1, status = 0;
+	int err = 0, res, pfd = -1, status = 0, fs_seen = 0;
 	struct in_addr inaddr;
 	struct in6_addr in6addr;
 	struct in6_addr *addr = malloc(sizeof(struct in6_addr));
@@ -858,6 +865,12 @@ main(int argc, char **argv) {
 					prom_log_level(n);
 				}
 				break;
+			case 'z':
+				fs_seen = 1;
+				global.ncfg.fscfg = parse_fs_mods_list(optarg);
+				if (global.ncfg.fscfg == NULL)
+					err++;
+				break;
 			case '?':
 				fprintf(stderr, "Usage: %s %s\n", argv[0], shortUsage);
 				return(1);
@@ -882,6 +895,8 @@ main(int argc, char **argv) {
 
 	if (global.ncfg.mibstat_mode == MIB_MODE_FAIL)
 		global.ncfg.mibstat_mode = parse_mib_mode_list("");
+	if (fs_seen == 0)
+		global.ncfg.fscfg = parse_fs_mods_list("");
 	tps = sysconf(_SC_CLK_TCK);
 	system_cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 	page_sz = PAGESIZE;

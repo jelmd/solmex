@@ -83,7 +83,7 @@ PROGS= solmex
 PROGSRCS = $(LIBSRCS)
 PROGOBJS = $(PROGSRCS:%.c=%.o)
 
-MEXOBJS = mib.o network.o cpu_sys.o vmstat.o mem.o \
+MEXOBJS = fs.o mib.o network.o cpu_sys.o vmstat.o mem.o \
 	cpu_speed.o load.o ks_util.o cpuinfo.o boottime.o dmi.o init.o main.o
 
 all:	$(PROGS)

@@ -1361,6 +1361,9 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_UDP_OUTERRORS_T "counter"
 #define SOLMEX_UDP_OUTERRORS_N solmex_node_netstat_Udp_OutErrors
 
+
+#define SOLMEX_FS_NAME_PREFIX "solmex_node_fs_"
+
 /*
 #define SOLMEXM_XXX_D "short description."
 #define SOLMEXM_XXX_T "gauge"
