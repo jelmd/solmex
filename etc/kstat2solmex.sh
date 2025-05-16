@@ -119,6 +119,59 @@ function doNet {
 	printAll MODNIC  anicstats ${IPREFIX}
 }
 
+function doMib2 {
+	integer IGNORE=1
+	typeset -u PREFIX='SOLMEX_' IPREFIX PFX U
+	# 'netstat' is node-exporter for Linux compat.
+	typeset -l MPREFIX='solmex_node_netstat' SUBMOD=
+	typeset A B C D E M SFX METRIC UNIT
+	typeset -A SNAMErawip SNAMEicmp SNAMEip SNAMEsctp SNAMEtcp SNAMEudp MOD
+	while read A B C D E; do
+		if [[ $A == 'module:' ]]; then
+			read -A E
+			if (( D == 0)) && [[ ${E[3]} == 'mib2' ]]; then
+				B+=":${E[1]}"
+				if [[ $B == 'icmp:rawip' || $B == 'ip:icmp' || $B == 'ip:ip' ||\
+					$B == 'sctp:sctp' || $B == 'tcp:tcp' || $B == 'udp:udp' ]]
+				then
+					SUBMOD=${E[1]}
+					typeset -n SNAME="SNAME${SUBMOD}"
+					(( VERB )) && print -u2 -f "======= %s =======\n" ${SUBMOD}
+					IGNORE=0
+					continue
+				fi
+			fi
+			IGNORE=1
+			continue
+		fi
+		(( IGNORE )) && continue
+		[[ -z $A ]] && IGNORE=1 && continue
+		[[ $A == 'crtime' || $A == 'snaptime' ]] && continue
+		PFX=${A:0:1}
+		METRIC="${PFX}${A:1}" UNIT= SFX=
+		# For now we keep the "snmp names" and do not mangle them
+		[[ -z ${METRIC} ]] && continue
+		[[ -z ${UNIT} ]] || METRIC+='_'
+		METRIC+="${UNIT}${SFX}"
+		MOD["${SUBMOD}"]+=" ${METRIC}"
+		SNAME["${METRIC}"]="$A"
+		(( VERB )) && print -u2 -f "%16s\t%s\n" "${METRIC}" "${SNAME[${METRIC}]}"
+	done<"$1"
+	set -s ${!MOD[@]}
+	E="$@"
+	for A in $E; do
+		[[  -z $A ]] && continue
+		(( VERB )) && print -u2 "=== ${A} ==="
+		typeset -n SNAME="SNAME$A"
+		typeset -a SMOD="${MOD[$A]}"
+		U=${A:0:1}
+		PFX="${PREFIX}$A"
+		IPREFIX="${A}_IDX"
+		printIdx SNAME "${PFX}" "${MPREFIX}_${U}${A:1}" "${IPREFIX}" $A
+		printAll SMOD ${A}stats ${IPREFIX}
+	done
+}
+
 function printAll {
 	typeset -n A=$1
 	typeset -u U
@@ -137,19 +190,21 @@ function printAll {
 		(( I == 3 )) && S+='\n' && I=0
 	done
 	(( I )) && S+='\n'
-	print "$S\};\nstatic uint32_t ${V}_sz = ARRAY_SIZE($V);"
+	print "$S};\nstatic uint32_t ${V}_sz = ARRAY_SIZE($V);"
 }
 
 function printIdx {
 	typeset -n A=$1
 	typeset -u U
 	typeset PREFIX="$2" MPREFIX="$3" IPREFIX="$4" T=${PREFIX%%_*}
+	typeset SFX="$5"
 	integer I=0
+	[[ -n ${SFX} && ${SFX:0:1} != '_' ]] && SFX="_${SFX}"
 	typeset -l ITYPE="${IPREFIX}"
 	typeset H= \
-		S='/* solmex metric names */\nstatic const char *snames[] = {\n' \
-		M='/* kstat names */\nstatic const char *knames[] = {\n' \
-		D='/* metric HELP text */\nstatic const char *sdesc[] = {\n' \
+		S="/* solmex metric names */\nstatic const char *snames${SFX}[] = {\n" \
+		M="/* kstat names */\nstatic const char *knames${SFX}[] = {\n" \
+		D="/* metric HELP text */\nstatic const char *sdesc${SFX}[] = {\n" \
 		E="/* index into snames/knames/sdesc */\ntypedef enum ${ITYPE} {\n"
 
 	S+='#define STRINGIFY(x) #x\n#define _S(x) STRINGIFY(x)\n'
@@ -177,6 +232,7 @@ function printIdx {
 function doMain {
 	[[ -z $1 || ! -s $1 ]] && { showUsage; return 1; }
 	[[ ${TARGET} == 'net' ]] && doNet "$1"
+	[[ ${TARGET} == 'mib' ]] && doMib2 "$1"
 }
 
 unset VERB TARGET; integer VERB=0

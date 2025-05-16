@@ -8,16 +8,17 @@ solmex \- a metrics exporter for Solaris
 .na
 .HP
 .B solmex
-[\fB\-LSVcdfh\fR]
+[\fB\-ABCDFIKLMOPQSUVWYcdfh\fR]
+[\fB\-T\ \fIniclist\fR]
+[\fB\-b\ \fImodlist\fR]
+[\fB\-i\ \fImode\fR]
 [\fB\-l\ \fIfile\fR]
-[\fB\-n\ \fIlist\fR]
+[\fB\-m\ \fImode\fR]
+[\fB\-n\ \fIcollist\fR]
 [\fB\-p\ \fIport\fR]
 [\fB\-s\ \fIip\fR]
+[\fB\-t\ \fImode\fR]
 [\fB\-v\ DEBUG\fR|\fBINFO\fR|\fBWARN\fR|\fBERROR\fR|\fBFATAL\fR]
-[\fB\-x\ \fImetric_regex\fR]
-[\fB\-X\ \fIstats_regex\fR]
-[\fB\-i\ \fImetric_regex\fR]
-[\fB\-I\ \fIstats_regex\fR]
 .ad
 .hy
 
@@ -255,6 +256,24 @@ Disable the swap related \fBsolmex_node_swap_\fI*\fR metrics (\fBunix::vminfo\fR
 Disable system memory related \fBsolmex_node_mem_\fI*\fR metrics (\fBunix::system_pages\fR).
 
 .TP
+.BI \-b " modlist"
+.PD 0
+.TP
+.BI \-\-netstats= modlist
+\fImodlist\fR is a comma-separated list of modes and metric group names,
+allowing users to specify which of the \fBsolmex_node_netstat_\fI*\fR metrics to
+emit and to what extent (see also \fBkstat -c mib2\fR and \fBnetstat -s\fR).
+Supported modes include: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r),
+\fBextended\fR (2|x), and \fBall\fR (3|a).
+Supported metric group names are: \fBrawip\fB, \fBip\fR, \fBicmp\fR, \fBudp\fR,
+\fBtcp\fR, \fBsctp\fR (\fB::\fIgroup\fR).
+If no modlist is provided or if an empty modlist is specified, the default
+setting of \fBnone,rawip,sctp,extended,ip,icmp,normal,udp,tcp\fR is used.
+The initial default mode is \fBextended\fR. As soon as another valid mode is
+encountered in the \fImodlist\fR, this mode will be applied to all subsequent
+metric group names.
+
+.TP
 .B \-c
 .PD 0
 .TP
@@ -291,8 +310,8 @@ Print a short help summary to the standard output and exit.
 .TP
 .BI \-\-sysinfo= mode
 Specify which of the \fBsolmex_node_sys_\fI*\fR metrics to emit (\fBcpu::sys\fR).
-Supported modes are: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r),
-\fBextended\fR (2|x), and \fBall\fR (3|a). By default, \fBnormal\fR is used,
+Supported modes are: \fBnone\fR (0|n), \fBnormal\fR or \fBregular\fR (1|r), and
+\fBextended\fR (2|x). By default, \fBnormal\fR is used,
 and system overall metrics (cpu="sum") are calculated.
 To enable CPU strand (also known as thread-wise) metrics, add the option \fB-I\fR.
 
@@ -381,14 +400,14 @@ convenience \fB1\fR..\fB5\fR respectively.
 To disable all metrics e.g. to find out step-by-step what you really need, one
 may use the following command:
 .RS 4
-.B solmex\ \-ABCDFOPQUWY\ \-i\ none\ \-m\ none\ \-t\ none
+.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ none\ \-m\ none\ \-t\ none
 .RE
 
 To run solmex as daemon and have it provide all data usually shown
 in \fBvmatst\fR(1M) and \fBmpstat\fR(1M) use at least:
 TBD
 .RS 4
-.B solmex\ \-ABCDFOPQUWY\ \-i\ x\ \-m\ x\ \-t\ none
+.B solmex\ \-ABCDFOPQUWY\ \-b\ none\ \-i\ x\ \-m\ x\ \-t\ none
 .RE
 
 However, one probably wants to have basic network metrics enabled, too. E.g.

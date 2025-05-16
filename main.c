@@ -34,6 +34,7 @@
 #include "vmstat.h"
 #include "cpu_sys.h"
 #include "network.h"
+#include "mib.h"
 
 typedef enum {
 	SMF_EXIT_OK	= 0,
@@ -67,6 +68,7 @@ static struct option options[] = {
 	{"version",				no_argument,		NULL, 'V'},
 	{"no-swap",				no_argument,		NULL, 'W'},
 	{"no-mem",				no_argument,		NULL, 'Y'},
+	{"netstats",			required_argument,	NULL, 'b'},
 	{"compact",				no_argument,		NULL, 'c'},
 	{"daemon",				no_argument,		NULL, 'd'},
 	{"foreground",			no_argument,		NULL, 'f'},
@@ -83,8 +85,9 @@ static struct option options[] = {
 };
 
 static const char *shortUsage = {
-	"[-ABCDFIKLMOPQSUVWYcdfh] [-T list]  [-i {n|r|x}] [-l file] [-n list] "
-	"[-m {n|r|x|a}] [-p port] [-s ip] [-t {n|r|x|a}] "
+	"[-ABCDFIKLMOPQSUVWYcdfh] [-T list]  [-b {[i|c|u|t|s|n|r|x|a]}[,...]] "
+	"[-i {n|r|x}] [-l file] [-m {n|r|x|a}] [-n list] "
+	"[-p port] [-s ip] [-t {n|r|x|a}] "
 	"[-v DEBUG|INFO|WARN|ERROR|FATAL]"
 };
 
@@ -104,6 +107,7 @@ typedef struct node_cfg {
 	vm_stat_quantity_t vmstat_type;
 	cpu_sys_quantity_t cpusys_type;
 	nic_stat_quantity_t nicstat_type;
+	mib_mods_t mibstat_mode;
 	nic_filter_chain_t *nfc;
 	bool no_vmstat_mp;
 	bool no_cpusys_mp;
@@ -152,6 +156,7 @@ static struct {
 		.vmstat_type = VMSTAT_NORMAL,
 		.cpusys_type = CPUSYS_NORMAL,
 		.nicstat_type = NICSTAT_NORMAL,
+		.mibstat_mode = MIB_MODE_FAIL,
 		.nfc = NULL,
 		.no_vmstat_mp = true,
 		.no_cpusys_mp = true,
@@ -202,6 +207,7 @@ disableMetrics(char *skipList) {
 				global.ncfg.vmstat_type = VMSTAT_NONE;
 				global.ncfg.cpusys_type = CPUSYS_NONE;
 				global.ncfg.nicstat_type = NICSTAT_NONE;
+				global.ncfg.mibstat_mode = MIB_MODE_NONE;
 			} else {
 				PROM_WARN("Unknown metrics '%s'", s);
 				res++;
@@ -284,6 +290,8 @@ collect(prom_collector_t *self) {
 			if (global.ncfg.nicstat_type != NICSTAT_NONE)
 				collect_nicstat(sb, compact, kc, now, global.ncfg.nicstat_type,
 					global.ncfg.nfc);
+			if (global.ncfg.mibstat_mode)
+				collect_mib(sb, compact, kc, now, global.ncfg.mibstat_mode);
 		} else {
 			kstat_err_count++;
 			if (kstat_err_count > 10) {
@@ -709,6 +717,12 @@ main(int argc, char **argv) {
 			case 'Y':
 				global.ncfg.no_sys_mem = true;
 				break;
+			case 'b':
+				if ((global.ncfg.mibstat_mode = parse_mib_mode_list(optarg)) == MIB_MODE_FAIL) {
+					global.ncfg.mibstat_mode = 0;
+					err++;
+				}
+				break;
 			case 'c':
 				global.promflags |= PROM_COMPACT;
 				break;
@@ -740,6 +754,7 @@ main(int argc, char **argv) {
 					global.ncfg.cpusys_type = CPUSYS_EXTENDED;
 				} else {
 					fprintf(stderr, "Unsupported vmstat type '%s' ignored.", optarg);
+					err++;
 				}
 				break;
 			case 'l':
@@ -771,6 +786,7 @@ main(int argc, char **argv) {
 					global.ncfg.vmstat_type = VMSTAT_ALL;
 				} else {
 					fprintf(stderr, "Unsupported vmstat type '%s' ignored.", optarg);
+					err++;
 				}
 				break;
 			case 'n':
@@ -829,6 +845,7 @@ main(int argc, char **argv) {
 					global.ncfg.nicstat_type = NICSTAT_ALL;
 				} else {
 					fprintf(stderr, "Unsupported netstat type '%s' ignored.", optarg);
+					err++;
 				}
 				break;
 			case 'v':
@@ -863,6 +880,8 @@ main(int argc, char **argv) {
 		}
 	}
 
+	if (global.ncfg.mibstat_mode == MIB_MODE_FAIL)
+		global.ncfg.mibstat_mode = parse_mib_mode_list("");
 	tps = sysconf(_SC_CLK_TCK);
 	system_cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 	page_sz = PAGESIZE;

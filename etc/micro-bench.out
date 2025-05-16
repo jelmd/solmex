@@ -1,0 +1,14 @@
+node-exporter-sol --no-collector.zfs --web.disable-go-metrics
+AVG: 0.3521165196166670   MIN: 0.1749674520000000   MAX: 0.4783872370000000
+   PID USERNAME  SIZE   RSS STATE   PRI NICE      TIME  CPU PROCESS/NLWP  
+  1299 admin     118M   70M sleep    59    0   0:01:16 2.9% node-exporter-so/17
+
+AVG: 0.3465119210166670   MIN: 0.1793813710000000   MAX: 0.5035298270000000
+
+solmex -d -no-sysmem
+AVG: 0.0019796794833330   MIN: 0.0004728840000000   MAX: 0.0757128890000000
+   PID USERNAME  SIZE   RSS STATE   PRI NICE      TIME  CPU PROCESS/NLWP  
+  1299 admin      23M   21M sleep    59    0   0:00:00 0.0% solmex/2
+
+	175							379						7
+
