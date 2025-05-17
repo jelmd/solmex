@@ -1336,28 +1336,28 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_TCP_TIMRETRANSDROP_T "counter"
 #define SOLMEX_TCP_TIMRETRANSDROP_N solmex_node_netstat_Tcp_TimRetransDrop
 
-
-#define SOLMEX_UDP_ENTRY6SIZE_D ""
+// (#) .. udp #
+#define SOLMEX_UDP_ENTRY6SIZE_D "Size of a MIB2 UDP entry (udp6Entry_t) in bytes"
 #define SOLMEX_UDP_ENTRY6SIZE_T "counter"
 #define SOLMEX_UDP_ENTRY6SIZE_N solmex_node_netstat_Udp_Entry6Size
 
-#define SOLMEX_UDP_ENTRYSIZE_D ""
+#define SOLMEX_UDP_ENTRYSIZE_D "Size of a MIB2 UDP v6 entry (udp6Entry_t) in bytes"
 #define SOLMEX_UDP_ENTRYSIZE_T "counter"
 #define SOLMEX_UDP_ENTRYSIZE_N solmex_node_netstat_Udp_EntrySize
 
-#define SOLMEX_UDP_INDATAGRAMS_D ""
+#define SOLMEX_UDP_INDATAGRAMS_D "Received datagrams sent upstream - (8:1)"
 #define SOLMEX_UDP_INDATAGRAMS_T "counter"
 #define SOLMEX_UDP_INDATAGRAMS_N solmex_node_netstat_Udp_InDatagrams
 
-#define SOLMEX_UDP_INERRORS_D ""
+#define SOLMEX_UDP_INERRORS_D "Received datagrams not deliverable (other) - (3)"
 #define SOLMEX_UDP_INERRORS_T "counter"
 #define SOLMEX_UDP_INERRORS_N solmex_node_netstat_Udp_InErrors
 
-#define SOLMEX_UDP_OUTDATAGRAMS_D ""
+#define SOLMEX_UDP_OUTDATAGRAMS_D "Datagrams sent - (9:4)"
 #define SOLMEX_UDP_OUTDATAGRAMS_T "counter"
 #define SOLMEX_UDP_OUTDATAGRAMS_N solmex_node_netstat_Udp_OutDatagrams
 
-#define SOLMEX_UDP_OUTERRORS_D ""
+#define SOLMEX_UDP_OUTERRORS_D "Datagrams which could not be sent because of resource, policy or format problems"
 #define SOLMEX_UDP_OUTERRORS_T "counter"
 #define SOLMEX_UDP_OUTERRORS_N solmex_node_netstat_Udp_OutErrors
 
