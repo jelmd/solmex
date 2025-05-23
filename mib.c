@@ -179,8 +179,8 @@ collect_mib(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now, mib_mods_t m
 			PROM_WARN("collect_mib: %s", strerror(errno));
 			return;
 		}
-		psz = psb_len(sb);
 	}
+	psz = psb_len(sb);
 
 	for (kidx = 0; kidx < KS_IDX_MAX; kidx++) {
 		const char **knames, **snames, **sdescs;

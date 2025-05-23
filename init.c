@@ -48,9 +48,10 @@ start(bool dmi, bool kstats, bool compact, uint32_t *tasks) {
 	}
 	if (kstats) {
 		if (((status = lstat("/dev/kstat", &sbuf)) != 0)
-			|| (sbuf.st_mode & S_IFLNK) != S_IFLNK)
+			|| (((sbuf.st_mode & S_IFLNK) != S_IFLNK)
+				&& ((sbuf.st_mode & S_IFCHR) != S_IFCHR)))
 		{
-			PROM_WARN("'/dev/kstat' symlink not found. Kernel stats n/a.", "");
+			PROM_WARN("'/dev/kstat' not found. Kernel stats n/a.", "");
 			res |= 2;
 		} else {
 			(*tasks)++;
