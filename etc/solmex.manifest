@@ -1,16 +1,24 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <!--
-	file: /lib/svc/manifest/system/solmex.xml
-	Run  'svcadm restart manifest-import' to activate if you copied the file
-	to this location manually (i.e. not installed as part of a package).
+	file: /lib/svc/manifest/application/management/solmex.xml
+
+	To remove this service, use:
+		rm -f /lib/svc/manifest/application/solmex.xml
+		svcadm restart manifest-import
+	To re-import and run, use:
+		cp etc/solmex.xml /lib/svc/manifest/application/management/solmex.xml
+		svcadm restart manifest-import
+		svcadm enable solmex
+
+	The solmex package does this on install/uninstall automatically.
 
     Copyright 2025 Jens Elkner.
 -->
 
-<service_bundle type='manifest' name='LNFsolmex'>
+<service_bundle type='manifest' name='LNFsolmex:solmex'>
 
-<service name='system/solmex' type='service' version='1'>
+<service name='application/management/solmex' type='service' version='1'>
 
 	<create_default_instance enabled="false" />
 
@@ -28,7 +36,7 @@
 	    <service_fmri value='svc:/system/filesystem/local:default'/>
 	</dependency>
 
-	<!-- Start solmex before vmagent -->
+	<!-- Start solmex before vmagent (if there is one) -->
 	<dependent name='vmagent' grouping='optional_all' restart_on='none'>
 		<service_fmri value='svc:/application/database/vmagent'/>
 	</dependent>
@@ -52,11 +60,10 @@
 	<property_group name='config' type='application'>
 		<stability value='Evolving' />
 		<!-- Check operational state e.g. via http://localhost:9290/metrics -->
-		<propval name='port' type='integer' value='9290' />
+		<propval name='port' type='integer' value='9100' />
 		<propval name='logfile' type='astring' value='/var/log/solmex.log' />
-		<!-- Any options to pass verbatim to the agent. E.g. just power reading
-			and overall scrapetime use '-c -n version,node,process -PS' or for
-			compact as possible, readings, only: '-c PoDNUT'
+		<!-- Any options to pass verbatim to the agent. E.g.
+			svccfg -s solmex:default setprop 'config/start_args = ( "-cn" "version" "-ix" "-mx" "-tx" "-FTP:.*" "-zthis:nfs4,zfs" )'
 		-->
 		<property name="start_args" type="astring">
 			<astring_list>
