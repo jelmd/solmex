@@ -1,12 +1,18 @@
 # solmex
 
-solmex is a *m*etrics *ex*porter for Solaris OS. *solmex* collects OS/kernel specific data and optionally exposes them via HTTP in [Prometheuse exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/) using the endpoint URL http://_hostname:9100_/metrics (port and IP are customizable of course) and thus visualized e.g. using [Grafana](https://grafana.com/), [Netdata](https://www.netdata.cloud/), or [Zabbix](https://www.zabbix.com/).
+solmex is a *m*etrics *ex*porter for the Solaris OS. It collects OS/kernel-specific data and can optionally expose this data via HTTP in the [Prometheuse exposition format](https://prometheus.io/docs/instrumenting/exposition_formats/). This allows metric collector and time series database tools like VictoriaMetrics and Prometheus to gather these metrics (e.g., via http://_hostname:9100_/metrics). These databases can hen be utilized to further process, reuse, or visualize the metrics using tools such as [Grafana](https://grafana.com/).
 
-Basically *solmex* is able to retrieve and expose all data from the Solaris OS/kernel e.g. using its kstats facilities and friends. It is a real daemon written in **C**, which caches as much data as possible.
+*solmex* s capable of retrieving and exposing comprehensive data from the Solaris OS/kernel, utilizing its kstats facilities among other resources. However, it limits the data to those typically required for everyday monitoring. It functions as a true daemon, written in C, which caches as much data as possible. Therefore, it is approximately 100 to 500 times faster than node-exporter, depending on the specific data being exported, and it provides significantly more useful metrics than node-exporter or similar tools.
 
 ## KISS
 
-Since efficiency, size and simplicity of the utility is one of its main goals, beside [libprom](https://github.com/jelmd/libprom) to handle some prometheus (PROM) related stuff and [libmicrohttpd](https://github.com/Karlson2k/libmicrohttpd) to provide http access, no additional 3rd party libraries, tools, etc. are used. The basic idea is to run *solmex* as a local service on the machine to monitor and use OS tools and services (firewall, http proxy, VictoriaMetrics vmagent, and the like) to control access to exposed data and to replace/ament the wrt. to metrics very limited Prometheus exporter and the like.
+Efficiency, size, and simplicity are key objectives of solmex. Consequently, aside from using [libprom](https://github.com/jelmd/libprom) for handling certain Prometheus (PROM) functionality and [libmicrohttpd](https://github.com/Karlson2k/libmicrohttpd) for providing HTTP access, no additional third-party libraries or tools are utilized. The core idea is to operate *solmex* as a local service on the machine being monitored, while leveraging existing OS tools and services, such as firewalls, HTTP proxies, and VictoriaMetrics vmagent to control access to the exposed data. This approach complements the exporters, which are primarily specialized in collecting and simply exporting metrics, by providing the desired level of security and access control."
+
+## Examples
+
+- [all stats emitted by *solmex* incl. comments](https://github.com/jelmd/solmex/blob/main/etc/example-full.out)
+- [all stats emitted by *solmex* excl. comments](https://github.com/jelmd/solmex/blob/main/etc/example-full-noComments.out)
+- [a day-by-day example we use](https://github.com/jelmd/solmex/blob/main/etc/example-day-by-day.out)
 
 ## Requirements
 
@@ -28,11 +34,7 @@ issue there using https://github.com/jelmd/solmex/issues .
 
 ## Versioning
 
-*solmex* follows the basic idea of semantic versioning, but having the real world
-in mind. Therefore official releases have always THREE numbers (A.B.C), not
-more and not less! For nightly, alpha, beta, RC builds, etc. a *.0* and
-possibly more dot separated digits will be append, so that one is always able
-to overwrite this one by using a 4th digit > 0.
+*solmex* follows the basic principles of semantic versioning with practical considerations. Official releases always consist of three numbers (A.B.C), strictly neither more nor less. For nightly, alpha, beta, or release candidate (RC) builds, etc., a '.0' and potentially additional dot-separated digits are appended. This allows for the possibility of overwriting a pre-release by utilizing a fourth digit greater than 0.
 
 
 ## License
