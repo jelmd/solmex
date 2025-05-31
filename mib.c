@@ -205,7 +205,10 @@ collect_mib(psb_t *sb, bool compact, kstat_ctl_t *kc, hrtime_t now, mib_mods_t m
 		for (m = 0; m < stats_sz; m++) {
 			uint32_t l = stats[m];
 			if (!compact)
-				addPromInfo4("", snames[l], "counter", sdescs[l]);
+				addPromInfo4("", snames[l],
+					(kidx == KS_IDX_TCP && l == TCP_IDX_CURRESTAB) ||
+					(kidx == KS_IDX_SCTP && l == SCTP_IDX_SCTPCURRESTAB)
+						? "gauge" : "counter", sdescs[l]);
 			for (i = 0; i < n; i++) {
 				if ((ksp = ks_read(kc, kstat[kidx].ksp[i], now, NULL)) != NULL) {
 #pragma GCC diagnostic push

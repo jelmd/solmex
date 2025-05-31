@@ -976,7 +976,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_SCTP_SCTPCHECKSUMERROR_N solmex_node_netstat_Sctp_SctpChecksumError
 
 #define SOLMEX_SCTP_SCTPCURRESTAB_D "Connections with state ESTABLISHED, SHUTDOWN-RECEIVED or SHUTDOWN-PENDING - (1)"
-#define SOLMEX_SCTP_SCTPCURRESTAB_T "counter"
+#define SOLMEX_SCTP_SCTPCURRESTAB_T "gauge"
 #define SOLMEX_SCTP_SCTPCURRESTAB_N solmex_node_netstat_Sctp_SctpCurrEstab
 
 #define SOLMEX_SCTP_SCTPFRAGUSRMSGS_D "Fragmented User Messages - (14)"
@@ -1141,7 +1141,7 @@ kstat cpu:0:vm | tail +3 | awk -v P='#define SOLMEX_VM_' -v NP='solmex_node_vm_'
 #define SOLMEX_TCP_CONNTABLESIZE6_N solmex_node_netstat_Tcp_ConnTableSize6
 
 #define SOLMEX_TCP_CURRESTAB_D "Connections in ESTABLISHED or CLOSE-WAIT state - (9)"
-#define SOLMEX_TCP_CURRESTAB_T "counter"
+#define SOLMEX_TCP_CURRESTAB_T "gauge"
 #define SOLMEX_TCP_CURRESTAB_N solmex_node_netstat_Tcp_CurrEstab
 
 #define SOLMEX_TCP_ESTABRESETS_D "Direct transitions ESTABLISHED|CLOSE-WAIT -> CLOSED - (8)"
