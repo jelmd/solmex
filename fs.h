@@ -27,10 +27,11 @@ extern "C" {
 /**
  * @brief Parse the given fs list string and return the corresponding mode mask.
  * @param s	The string to parse. An empty string is equal to the default mode.
- * @return A reference to the config to be used in the collect_fs() call,
- * 	`NULL` on error otherwise.
+ * @param valid Gets set to @code 1 if the given string could be parsed
+ * 	successfully, to @code 0 otherwise.
+ * @return A reference to the config to be used in the collect_fs() call.
  */
-void *parse_fs_mods_list(const char *s);
+void *parse_fs_mods_list(const char *s, int *valid);
 
 /**
  * @brief Get metrics of the vopstats_ kstats.

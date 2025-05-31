@@ -866,9 +866,8 @@ main(int argc, char **argv) {
 				}
 				break;
 			case 'z':
-				fs_seen = 1;
-				global.ncfg.fscfg = parse_fs_mods_list(optarg);
-				if (global.ncfg.fscfg == NULL)
+				global.ncfg.fscfg = parse_fs_mods_list(optarg, &fs_seen);
+				if (fs_seen == 0)
 					err++;
 				break;
 			case '?':
@@ -896,7 +895,7 @@ main(int argc, char **argv) {
 	if (global.ncfg.mibstat_mode == MIB_MODE_FAIL)
 		global.ncfg.mibstat_mode = parse_mib_mode_list("");
 	if (fs_seen == 0)
-		global.ncfg.fscfg = parse_fs_mods_list("");
+		global.ncfg.fscfg = parse_fs_mods_list("", &fs_seen);
 	tps = sysconf(_SC_CLK_TCK);
 	system_cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 	page_sz = PAGESIZE;

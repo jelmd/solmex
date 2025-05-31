@@ -165,7 +165,7 @@ dump_cfg(zinfo_t *head, char *buf, size_t blen) {
 }
 
 void *
-parse_fs_mods_list(const char *optarg) {
+parse_fs_mods_list(const char *optarg, int *valid) {
 	if (optarg == NULL)
 		return NULL;
 
@@ -181,6 +181,7 @@ parse_fs_mods_list(const char *optarg) {
 	SET_FS_MOD(zdefault.mods, KS_IDX_ZFS);
 	zdefault.zname = strdup("any");
 	zdefault.zid = ANY_ZID;
+	*valid = 0;
 
 	check_zone_vars();
 	if (len == 0) {
@@ -275,6 +276,7 @@ parse_fs_mods_list(const char *optarg) {
 		releaseZinfo(zchain_head);
 		return NULL;
 	}
+	*valid = 1;
 	return sortZinfos(zchain_head);
 }
 
