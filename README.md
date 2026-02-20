@@ -23,7 +23,7 @@ Efficiency, size, and simplicity are key objectives of solmex. Consequently, asi
 ## Build
 
 Adjust the **Makefile** if needed, optionally set related environment variables
-(e.g. `export USE_CC=gcc`) and run GNU **make**.
+(e.g. `export USE_CC=gcc CPP_FLAGS='-D__illumos__'`) and run GNU **make**.
 
 ## Repo
 

@@ -80,10 +80,21 @@ record_link(dladm_handle_t dh, datalink_id_t linkid, void *arg) {
 	}
 	// lets populate it here (instead of just recording the linkId) immediately
 	// so we do not clutter other places with dladm ...
+#ifdef __illumos__
+	status = dladm_datalink_id2info(dh, linkid, &flags,
+		&(NEXT_NIC(bucket).class),
+		&media, NEXT_NIC(bucket).name, MAXLINKNAMELEN);
+#else
 	status = dladm_datalink_id2linkinfo(dh, linkid, &flags,
 		&(NEXT_NIC(bucket).class),
 		&media, NEXT_NIC(bucket).name, MAXLINKNAMELEN, &(NEXT_NIC(bucket).zid));
+#endif
 	if (status == DLADM_STATUS_OK) {
+#ifdef __illumos__
+		zoneid_t zid = ALL_ZONES;
+		status = zone_check_datalink(&zid, linkid);
+		NEXT_NIC(bucket).zid = status == 0 ? zid : 0;
+#endif
 		NEXT_NIC(bucket).lid = linkid;
 		if (NEXT_NIC(bucket).class == DATALINK_CLASS_PHYS) {
 			NEXT_NIC(bucket).tname = PHYS;
@@ -114,7 +125,11 @@ collectNicInfo(void) {
 	static nic_bucket_t *bucket = NULL;
 
 	if (dladm == NULL) {
+#ifdef __illumos__
+		if ((status = dladm_open(&dladm)) != DLADM_STATUS_OK) {
+#else
 		if ((status = dladm_open(&dladm, NULL)) != DLADM_STATUS_OK) {
+#endif
 			PROM_WARN("Could not open /dev/dld", "");
 			return bucket;
 		}

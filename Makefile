@@ -41,6 +41,8 @@ OPTIMZE_cc ?= -xO3
 OPTIMZE_gcc ?= -O3
 OPTIMZE ?= $(OPTIMZE_$(CC)) -DNDEBUG
 
+#CPP_FLAGS = -D__illumos__
+
 CFLAGS_cc = -xcode=pic32
 CFLAGS_cc += -errtags -erroff=%none,E_UNRECOGNIZED_PRAGMA_IGNORED,E_ATTRIBUTE_UNKNOWN,E_NONPORTABLE_BIT_FIELD_TYPE -errwarn=%all -D_XOPEN_SOURCE=600 -D__EXTENSIONS__=1
 CFLAGS_cc += -pedantic -v
@@ -53,7 +55,7 @@ CFLAGS_SunOS = -I/usr/include/microhttpd -D_MHD_DEPR_MACRO -D__EXTENSIONS__
 CFLAGS_libprom ?= $(shell [ -d /usr/include/libprom ] && printf -- '-I/usr/include/libprom' )
 #CFLAGS_libprom += $(shell [ -d ../libprom/prom/include ] && printf -- '-I../libprom/prom/include' )
 CFLAGS ?= -m$(MACH) $(CFLAGS_$(CC)) $(CFLAGS_libprom) $(OPTIMZE) -g
-CFLAGS += -std=c11 -DVERSION=\"$(VERSION)\"
+CFLAGS += $(CPP_FLAGS) -std=c11 -DVERSION=\"$(VERSION)\"
 CFLAGS += -DPROM_LOG_ENABLE -D_XOPEN_SOURCE=600
 CFLAGS += $(CFLAGS_$(OS)) $(DEBUG_FLAGS) -DISSUES_URL=\"$(ISSUES_URL)\"
 
