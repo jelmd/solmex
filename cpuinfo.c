@@ -148,7 +148,7 @@ trimCpuModel(const char *brand) {
 static bool
 addSpeedInfo(psb_t *sb, const char *frequencies, uint16_t cpuNum) {
 	int64_t min = -1, max = -1, turbo_speed = get_turbo_speed(cpuNum);
-	char buf[32], *s, *t;
+	char buf[32], *t;
 	size_t len;
 
 	if (cpuNum > system_cpu_max) {
@@ -170,7 +170,7 @@ addSpeedInfo(psb_t *sb, const char *frequencies, uint16_t cpuNum) {
 		if ((t = strrchr(frequencies, ':')) != NULL) {
 			max = strtol(t, NULL, 10);
 			if (errno) {
-				PROM_WARN("Unable to extract kstat's CPU max frequency from '%s'", s);
+				PROM_WARN("Unable to extract kstat's CPU max frequency from '%s'", t);
 				max = min;
 			}
 		}
